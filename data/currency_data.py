@@ -1,6 +1,8 @@
+
 import pandas as pd
 
 from data.binance_data_provider import BinanceDataProvider
+from data.validation import validate_ohlcv_df
 
 
 class CurrencyData:
@@ -9,7 +11,7 @@ class CurrencyData:
     def __init__(self):
 
         # Currency name, like 'BTCUSDT'
-        self.currency: str | None = None
+        self.symbol: str | None = None
 
         # Data provider
         self.binance_data_provider: BinanceDataProvider | None = None
@@ -41,6 +43,34 @@ class CurrencyData:
 
         if self.binance_data_provider is None:
             raise RuntimeError("Binance data provider is required to update currency data.")
+
+        print()
+        print(f">>> Update CurrencyData for {self.symbol}.")
+        if self.ohlcv_df is None:
+            print(f">>> Update {self.symbol} with new df.")
+            # Fetch Kline (candlestick) data
+            ohlcv_df = self.binance_data_provider.get_currency_ohlc_data(
+                self.symbol, self.lower_bound_timestamp, self.upper_bound_timestamp
+            )
+            self.ohlcv_df = ohlcv_df
+        else:
+            if (
+                    self.upper_bound_timestamp is None or
+                    (last_timestamp := self.ohlcv_df["timestamp"][-1]) < self.upper_bound_timestamp
+            ):
+                add_ohlcv_df = self.binance_data_provider.get_currency_ohlc_data(
+                    self.symbol, last_timestamp, self.upper_bound_timestamp
+                )
+
+                if len(add_ohlcv_df) > 1:
+
+                    add_ohlcv_df = add_ohlcv_df[1:]
+                    new_ohlcv_df = pd.concat((self.ohlcv_df, add_ohlcv_df))
+                    print(f">>> Update {self.symbol}, add {len(add_ohlcv_df)} entries.")
+                    self.ohlcv_df = new_ohlcv_df
+
+        validate_ohlcv_df(self.ohlcv_df)
+        print(f">>> CurrencyData for {self.symbol} has been updated, final len = {len(self.ohlcv_df)}.")
 
     def remove_last_row(self) -> None:
         """Remove last row from ohlc_df but left at least one."""

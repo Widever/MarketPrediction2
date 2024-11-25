@@ -7,6 +7,8 @@ import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from data.runtime_data import CURRENCY_DATAS
+
 TOOL_NAME: str = "change"
 CURRENT_LINES: list = []
 INFO_ANNOTATION = None
@@ -32,6 +34,19 @@ df_eth = generate_btc_ohlcv_df()
 btc_data = ohlcv_df_to_chart_data(df_btc)
 eth_data = ohlcv_df_to_chart_data(df_eth)
 
+show_klines_for_currencies = (
+    "BTCUSDT",
+    "ETHUSDT",
+    "ADAUSDT",
+)
+
+ohlcv_datas = {}
+for symbol in show_klines_for_currencies:
+    currency_data = CURRENCY_DATAS.get(symbol)
+    if currency_data is None:
+        raise RuntimeError(f"No currency data for {symbol}.")
+    ohlcv_datas[symbol] = currency_data.ohlcv_df
+
 def _quit():
     root.quit()
     root.destroy()
@@ -41,12 +56,16 @@ root = tk.Tk()
 root.protocol("WM_DELETE_WINDOW", _quit)
 root.title("Custom Toolbar Example")
 
-fig, axs = plt.subplots(3, 1, figsize=(12, 8), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1.2]})
+fig, axs = plt.subplots(
+    len(ohlcv_datas) + 0,
+    1,
+    figsize=(12, 8),
+    sharex=True,
+    gridspec_kw={'height_ratios': [1, 1, 1.2]}
+)
 
 ohlcv_data_dfs = (
-    df_btc,
-    df_eth,
-    None,
+    *ohlcv_datas.values(),
 )
 
 if len(ohlcv_data_dfs) != len(axs):
@@ -56,14 +75,11 @@ if len(ohlcv_data_dfs) != len(axs):
 # Adjust figure padding
 fig.subplots_adjust(left=0.03, right=0.87, top=0.85, bottom=0.2, hspace=0.4)
 
-# Plot BTC candlestick chart
-mpf.plot(btc_data, type='candle', ax=axs[0], style='yahoo', ylabel="")
-
-# Overlay ETH candlestick chart with transparency
-mpf.plot(eth_data, type='candle', ax=axs[1], style='yahoo', ylabel="")
-
-mpf.plot(eth_data, type='candle', ax=axs[2], style='yahoo', ylabel="")
-
+for ax_i_, (symbol_, ohlcv_df_) in enumerate(ohlcv_datas.items()):
+    # Plot BTC candlestick chart
+    y_lim = (ohlcv_df_["low"].min() * 0.98, ohlcv_df_["high"].max() * 1.02)
+    mpf.plot(ohlcv_df_to_chart_data(ohlcv_df_), type='candle', ax=axs[ax_i_], style='yahoo', ylabel="", ylim=y_lim)
+    axs[ax_i_].set_title(symbol_)
 
 # Integrate the matplotlib figure with Tkinter
 canvas = FigureCanvasTkAgg(fig, master=root)

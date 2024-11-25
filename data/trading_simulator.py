@@ -1,7 +1,7 @@
 import pandas as pd
 
 from data.order import Order, ClosedOrder, BuyOrder, SellOrder
-from data.validation import validate_ohlc_df
+from data.validation import validate_ohlcv_df
 
 
 class TradingSimulator:
@@ -45,7 +45,7 @@ class TradingSimulator:
         self.balance += order.quantity * order.stop_loss_price
 
     def next(self):
-        validate_ohlc_df(self.ohlcv_df)
+        validate_ohlcv_df(self.ohlcv_df)
         self.ohlcv_df: pd.DataFrame
 
         if self.current_index == len(self.ohlcv_df) - 1:
