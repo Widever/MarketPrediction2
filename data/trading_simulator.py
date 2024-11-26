@@ -7,8 +7,11 @@ from data.validation import validate_ohlcv_df
 class TradingSimulator:
 
     def __init__(self):
+        self.balance_stable: float = 1000.
+        self.start_index: int = 0
+
         # Balance usdt
-        self.balance: float = 0.
+        self.balance: float = self.balance_stable
 
         # Available tokens
         self.tokens: float = 0.
@@ -17,7 +20,20 @@ class TradingSimulator:
         self.closed_orders: list[ClosedOrder] = []
 
         self.ohlcv_df: pd.DataFrame | None = None
-        self.current_index: int = 0
+        self.current_index: int = self.start_index
+
+    def reset(self):
+        # Balance usdt
+        self.balance: float = self.balance_stable
+
+        # Available tokens
+        self.tokens: float = 0.
+
+        self.open_orders: list[Order] = []
+        self.closed_orders: list[ClosedOrder] = []
+
+        self.ohlcv_df: pd.DataFrame | None = None
+        self.current_index: int = self.start_index
 
     def execute_cancel_order(self, order: Order) -> None:
         if isinstance(order, BuyOrder):

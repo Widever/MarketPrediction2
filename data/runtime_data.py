@@ -2,6 +2,8 @@ from data.binance_data_provider import BinanceDataProvider
 from data.currency_data import CurrencyData
 import datetime as dt
 
+from data.trading_simulator import TradingSimulator
+
 CURRENCY_DATAS = {}
 
 def init_runtime_data():
@@ -25,3 +27,6 @@ def init_runtime_data():
         currency_data.update()
 
 init_runtime_data()
+
+SIMULATOR = TradingSimulator()
+SIMULATOR.balance_stable = 1000
