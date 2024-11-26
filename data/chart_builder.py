@@ -44,14 +44,44 @@ show_klines_for_currencies = (
     "ETHUSDT",
     "ADAUSDT",
 )
+def _get_start_end_indexes(start_index: int, data_len: int, sample_len: int, end_limit: int | None):
+    end_index = min(end_limit, start_index + sample_len) if end_limit is not None else start_index + sample_len
+    start_index = min(start_index, data_len - 2)
+    return start_index, end_index
 
-def run():
+def run(start_i: int = 0, sample_len: int = 600, end_limit: int | None = None):
+    if start_i < 0:
+        raise RuntimeError("start_i should be >= 0")
+
+
     ohlcv_datas = {}
     for symbol in show_klines_for_currencies:
         currency_data = CURRENCY_DATAS.get(symbol)
         if currency_data is None:
             raise RuntimeError(f"No currency data for {symbol}.")
-        ohlcv_datas[symbol] = currency_data.ohlcv_df
+
+        start_index, end_index = _get_start_end_indexes(start_i, len(currency_data.ohlcv_df), sample_len, end_limit)
+        ohlcv_datas[symbol] = currency_data.ohlcv_df[start_index:end_index]
+
+        if len(ohlcv_datas[symbol]) < sample_len:
+            add_len = sample_len - len(ohlcv_datas[symbol])
+            interval = ohlcv_datas[symbol]["timestamp"].iat[1] - ohlcv_datas[symbol]["timestamp"].iat[0]
+            last_timestamp = ohlcv_datas[symbol]["timestamp"].iat[-1]
+            last_close = ohlcv_datas[symbol]["close"].iat[-1]
+            empty_ohlcv_df = pd.DataFrame(
+                {
+                    "timestamp": [last_timestamp + interval*t for t in range(1, add_len+1)],
+                    "open": [last_close] * add_len,
+                    "high": [last_close] * add_len,
+                    "low": [last_close] * add_len,
+                    "close": [last_close] * add_len,
+                    "volume": [last_close] * add_len,
+                }
+            )
+            ohlcv_datas[symbol] = pd.concat([ohlcv_datas[symbol], empty_ohlcv_df])
+
+        if len(ohlcv_datas[symbol]) != sample_len:
+            raise RuntimeError(f"Incorrect ohlcv_data len after processing {len(ohlcv_datas[symbol])=}, {symbol=}.")
 
     def _quit():
         root.quit()
@@ -93,11 +123,36 @@ def run():
 
     # Add disp 1
     disp_1 = dsp.get_disp_1_lower()
+    start_index, end_index = _get_start_end_indexes(start_i, len(disp_1), sample_len, end_limit)
+    print(f"{start_index=}")
+    print(f"{end_index=}")
+    disp_1 = disp_1[start_index:end_index]
+    interval = disp_1["timestamp"].iat[1] - disp_1["timestamp"].iat[0]
+    last_timestamp = disp_1["timestamp"].iat[-1]
+    last_disp = disp_1["disp"].iat[-1]
+    if len(disp_1) < sample_len:
+        add_len = sample_len - len(disp_1)
+        add_empty_disp = pd.DataFrame(
+            {
+                "timestamp": [last_timestamp + interval * t for t in range(1, add_len + 1)],
+                "disp": [last_disp]*add_len,
+            }
+        )
+        disp_1 = pd.concat([disp_1, add_empty_disp])
+
+    if len(disp_1) != sample_len:
+        raise RuntimeError("Incorrect disp len.")
     # set_date_index_from_timestamp(disp_1)
     y_lim = (disp_1["disp"].min() * 0.98, disp_1["disp"].max() * 1.02)
-    ax_i_ = ohlcv_charts_count + 1 - 1
+    ax_i_ = ohlcv_charts_count - 1 + 1 # + i is ax index
     # mpf.plot(disp_1["disp"], type='line', ax=axs[ax_i_], ylabel="", ylim=y_lim)
-    axs[ax_i_].plot(disp_1["disp"], color='blue', linestyle='-')
+    if (
+        disp_1["timestamp"].iat[0] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[0] or
+        disp_1["timestamp"].iat[-1] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[-1]
+    ):
+        raise RuntimeError("Incorrect disp after sampling.")
+
+    axs[ax_i_].plot(disp_1["disp"].reset_index(drop=True), color='blue', linestyle='-')
     axs[ax_i_].set_title("disp_1")
 
 
