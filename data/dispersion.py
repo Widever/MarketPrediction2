@@ -1,14 +1,19 @@
 from typing import List
 
 import pandas as pd
-
-from data.runtime_data import CURRENCY_DATAS
+import runtime_data as rd
+# from data.runtime_data import CURRENCY_DATAS
 from data.validation import validate_disp_df
 
 set_1 = [
     "BTCUSDT",
     "ETHUSDT",
     "ADAUSDT",
+    "BNBUSDT",
+    "DOGEUSDT",
+    "XRPUSDT",
+    "AVAXUSDT",
+    "SUIUSDT",
 ]
 
 def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.DataFrame:
@@ -19,7 +24,7 @@ def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.D
     from_to_changes = None
 
     for i, symbol in enumerate(set_):
-        currency_data = CURRENCY_DATAS.get(symbol)
+        currency_data = rd.CURRENCY_DATAS.get(symbol)
         if currency_data is None:
             raise RuntimeError(f"Not found currency data for {symbol}.")
 
@@ -67,7 +72,7 @@ def get_disp_1_lower() -> pd.DataFrame:
 
     validate_disp_df(disp)
 
-    if len(disp) != len(CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
         raise RuntimeError("Disp len is invalid.")
 
     return disp
@@ -78,7 +83,7 @@ def get_disp_1_upper() -> pd.DataFrame:
 
     validate_disp_df(disp)
 
-    if len(disp) != len(CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
         raise RuntimeError("Disp len is invalid.")
 
     return disp

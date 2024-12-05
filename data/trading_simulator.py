@@ -1,3 +1,4 @@
+import numpy
 import pandas as pd
 
 from data.order import Order, ClosedOrder, BuyOrder, SellOrder
@@ -21,6 +22,7 @@ class TradingSimulator:
 
         self.ohlcv_df: pd.DataFrame | None = None
         self.current_index: int = self.start_index
+        self.last_order_index = 0
 
     def reset(self):
         # Balance usdt
@@ -36,6 +38,7 @@ class TradingSimulator:
         self.current_index: int = self.start_index
 
     def execute_cancel_order(self, order: Order) -> None:
+        print(f">>> Execute cancel order: {type(order)=}, {order.open_timestamp=}, {order.price=}.")
         if isinstance(order, BuyOrder):
             self.balance += order.quantity * order.price
         elif isinstance(order, SellOrder):
@@ -44,6 +47,7 @@ class TradingSimulator:
             raise RuntimeError(f"Unknown order type: {type(order)}, {order=}")
 
     def execute_fill_order(self, order: Order) -> None:
+        print(f">>> Execute order: {type(order)=}, {order.open_timestamp=}, {order.price=}.")
         if isinstance(order, BuyOrder):
             self.tokens += order.quantity
         elif isinstance(order, SellOrder):
@@ -52,6 +56,7 @@ class TradingSimulator:
             raise RuntimeError(f"Unknown order type: {type(order)}, {order=}")
 
     def execute_stop_loss_order(self, order: Order) -> None:
+        print(f">>> Execute stop loss order: {type(order)=}, {order.open_timestamp=}, {order.price=}.")
         if not isinstance(order, SellOrder):
             raise RuntimeError("Stop loss supported only for SellOrder.")
 
@@ -73,13 +78,13 @@ class TradingSimulator:
         next_low_price = self.ohlcv_df.at[next_index, "low"]
         next_high_price = self.ohlcv_df.at[next_index, "high"]
 
-        if not isinstance(next_timestamp, int):
-            raise RuntimeError("timestamp should be int.")
+        if not isinstance(next_timestamp, (int, numpy.int64)):
+            raise RuntimeError(f"timestamp should be int. {type(next_timestamp)=}")
 
         remained_open_orders: list[Order] = []
 
         for order in self.open_orders:
-            if order.expired_timestamp >= next_timestamp:
+            if order.expired_timestamp is not None and order.expired_timestamp >= next_timestamp:
                 if order.expired_timestamp != next_timestamp:
                     print(
                         f">>> warning: order {order.id} is expired but expired_timestamp "
@@ -110,3 +115,113 @@ class TradingSimulator:
 
         self.open_orders = remained_open_orders
         self.current_index = next_index
+
+    def buy_all_instantly(self) -> str:
+        current_price = self.ohlcv_df.at[self.current_index, "close"]
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        quantity = self.balance / current_price
+        order_id = self.last_order_index + 1
+        order = BuyOrder(
+            id_=f"#buy_{order_id}",
+            price=current_price,
+            quantity=quantity,
+            open_timestamp=current_timestamp
+        )
+        self.balance -= quantity * current_price
+        self.execute_fill_order(order)
+        self.closed_orders.append(ClosedOrder(order, current_timestamp, "filled"))
+        self.last_order_index = order_id
+        return order.id
+
+    def order_buy_for_all(self, price: float, expire_steps: int = None):
+        current_price = self.ohlcv_df.at[self.current_index, "close"]
+
+        if price >= current_price:
+            print(">>> warning buy with price >= current price. buy instantly.")
+            return self.buy_all_instantly()
+
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        if expire_steps is not None:
+            interval = current_timestamp - self.ohlcv_df.at[self.current_index - 1, "timestamp"]
+            expired_timestamp = current_timestamp + interval * expire_steps
+        else:
+            expired_timestamp = None
+
+        quantity = self.balance / price
+        order_id = self.last_order_index + 1
+        order = BuyOrder(
+            id_=f"#buy_{order_id}",
+            price=price,
+            quantity=quantity,
+            open_timestamp=current_timestamp,
+            expired_timestamp=expired_timestamp
+        )
+        self.balance -= quantity * price
+        self.open_orders.append(order)
+        self.last_order_index = order_id
+        return order.id
+
+    def sell_all_instantly(self):
+        current_price = self.ohlcv_df.at[self.current_index, "close"]
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        quantity = self.tokens
+        order_id = self.last_order_index + 1
+
+        order = SellOrder(
+            id_=f"#sell_{order_id}",
+            price=current_price,
+            quantity=quantity,
+            open_timestamp=current_timestamp
+        )
+        self.tokens -= quantity
+        self.execute_fill_order(order)
+        self.closed_orders.append(ClosedOrder(order, current_timestamp, "filled"))
+        self.last_order_index = order_id
+        return order.id
+
+    def order_sell_for_all(self, price: float, stop_loss: float = None, expire_steps: int = None):
+        current_price = self.ohlcv_df.at[self.current_index, "close"]
+
+        if price <= current_price:
+            print(">>> warning sell with price <= current price. sell instantly.")
+            return self.sell_all_instantly()
+
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        if expire_steps is not None:
+            interval = current_timestamp - self.ohlcv_df.at[self.current_index - 1, "timestamp"]
+            expired_timestamp = current_timestamp + interval * expire_steps
+        else:
+            expired_timestamp = None
+
+        quantity = self.tokens
+        order_id = self.last_order_index + 1
+
+        order = SellOrder(
+            id_=f"#sell_{order_id}",
+            price=price,
+            quantity=quantity,
+            open_timestamp=current_timestamp,
+            expired_timestamp=expired_timestamp,
+            stop_loss_price=stop_loss
+        )
+        self.tokens -= quantity
+        self.open_orders.append(order)
+        self.last_order_index = order_id
+        return order.id
+
+    def cancel_all(self):
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        for order in self.open_orders:
+            self.execute_cancel_order(order)
+            self.closed_orders.append(ClosedOrder(order, current_timestamp, "canceled"))
+        self.open_orders = []
+
+    def info(self):
+        msg = (
+            f"balance: {self.balance}\n"
+            f"current_index: {self.current_index}\n"
+            f"open_orders: {len(self.open_orders)}\n"
+            f"closed_orders: {len(self.closed_orders)}\n"
+        )
+
+        print(msg)

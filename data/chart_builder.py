@@ -1,4 +1,5 @@
 import importlib
+from typing import List
 
 import pandas as pd
 import mplfinance as mpf
@@ -7,11 +8,10 @@ from matplotlib.widgets import MultiCursor
 import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-from data.runtime_data import CURRENCY_DATAS
+import runtime_data as rd
 
 import dispersion as dsp
-
+from data.order import ClosedOrder, BuyOrder, SellOrder
 
 TOOL_NAME: str = "change"
 CURRENT_LINES: list = []
@@ -52,6 +52,41 @@ def _get_start_end_indexes(start_index: int, data_len: int, sample_len: int, end
     start_index = min(start_index, data_len - 2)
     return start_index, end_index
 
+def _get_timestamp_mask(primary_timestamp_data: pd.DataFrame, sample_len: int) -> pd.DataFrame:
+
+    if len(primary_timestamp_data) > sample_len:
+        raise RuntimeError(
+            "Passed primary_timestamp data should already be sliced at start and end indices and not be longer than "
+            f"the sample length. {len(primary_timestamp_data)=}, {sample_len=}"
+        )
+    elif len(primary_timestamp_data) == sample_len:
+        result = pd.DataFrame()
+        result["timestamp"] = primary_timestamp_data["timestamp"]
+        return result
+
+    if len(primary_timestamp_data) < 2:
+        raise RuntimeError(f"{len(primary_timestamp_data)=} < 2.")
+
+    interval = primary_timestamp_data["timestamp"].iat[1] - primary_timestamp_data["timestamp"].iat[0]
+    if interval < 0:
+        raise RuntimeError("Invalid interval.")
+
+    last_timestamp = primary_timestamp_data["timestamp"].iat[-1]
+    add_len = sample_len - len(primary_timestamp_data)
+    extended_timestamp = (
+            list(primary_timestamp_data["timestamp"]) + [last_timestamp + interval * t for t in range(1, add_len + 1)]
+    )
+
+    if len(extended_timestamp) != sample_len:
+        raise RuntimeError(f"Invalid extended timestamp. {len(extended_timestamp)=}.")
+
+    result = pd.DataFrame()
+    result["timestamp"] = extended_timestamp
+    return result
+
+def _get_last_presented_value(reversible_):
+    return next((x for x in reversed(reversible_) if x is not None and not pd.isna(x)), None)
+
 def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
     if start_i < 0:
         raise RuntimeError("start_i should be >= 0")
@@ -81,31 +116,29 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
     def configure_data(start_i_=start_i):
         ohlcv_datas = {}
         global OHLCV_DATA_DFS
+
+        primary_timestamp_data = rd.CURRENCY_DATAS.get(show_klines_for_currencies[-1])
+        if primary_timestamp_data is None:
+            raise RuntimeError(f"No currency data for {show_klines_for_currencies[-1]}.")
+
+        start_index, end_index = _get_start_end_indexes(
+            start_i_, len(primary_timestamp_data.ohlcv_df), sample_len, end_limit
+        )
+        primary_timestamp_data = primary_timestamp_data.ohlcv_df[start_index:end_index]
+        timestamp_mask = _get_timestamp_mask(primary_timestamp_data, sample_len)
+
         for symbol in show_klines_for_currencies:
-            currency_data = CURRENCY_DATAS.get(symbol)
+            currency_data = rd.CURRENCY_DATAS.get(symbol)
             if currency_data is None:
                 raise RuntimeError(f"No currency data for {symbol}.")
 
-            start_index, end_index = _get_start_end_indexes(start_i_, len(currency_data.ohlcv_df), sample_len, end_limit)
-            ohlcv_datas[symbol] = currency_data.ohlcv_df[start_index:end_index]
+            ohlcv_datas_df_for_symbol = pd.merge(timestamp_mask, currency_data.ohlcv_df, on="timestamp", how="left")
+            last_close = _get_last_presented_value(ohlcv_datas_df_for_symbol["close"])
+            if last_close is None or pd.isna(last_close):
+                raise RuntimeError("Last close price is None.")
+            ohlcv_datas_df_for_symbol.fillna(last_close, inplace=True)
+            ohlcv_datas[symbol] = ohlcv_datas_df_for_symbol
 
-            if len(ohlcv_datas[symbol]) < sample_len:
-                add_len = sample_len - len(ohlcv_datas[symbol])
-                interval = ohlcv_datas[symbol]["timestamp"].iat[1] - ohlcv_datas[symbol]["timestamp"].iat[0]
-                last_timestamp = ohlcv_datas[symbol]["timestamp"].iat[-1]
-                last_close = ohlcv_datas[symbol]["close"].iat[-1]
-                empty_ohlcv_df = pd.DataFrame(
-                    {
-                        "timestamp": [last_timestamp + interval*t for t in range(1, add_len+1)],
-                        "open": [last_close] * add_len,
-                        "high": [last_close] * add_len,
-                        "low": [last_close] * add_len,
-                        "close": [last_close] * add_len,
-                        "volume": [last_close] * add_len,
-                    }
-                )
-                ohlcv_datas[symbol] = pd.concat([ohlcv_datas[symbol], empty_ohlcv_df])
-                ohlcv_datas[symbol] = ohlcv_datas[symbol].reset_index(drop=True)
             if len(ohlcv_datas[symbol]) != sample_len:
                 raise RuntimeError(f"Incorrect ohlcv_data len after processing {len(ohlcv_datas[symbol])=}, {symbol=}.")
 
@@ -120,7 +153,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
 
         for ax_i_, (symbol_, ohlcv_df_) in enumerate(ohlcv_datas.items()):
-            # Plot BTC candlestick chart
+            # Plot candlestick chart
             y_lim = (ohlcv_df_["low"].min() * 0.98, ohlcv_df_["high"].max() * 1.02)
             mpf_plot = mpf.plot(
                 ohlcv_df_to_chart_data(ohlcv_df_), type='candle', ax=axs[ax_i_], style='yahoo', ylabel="", ylim=y_lim
@@ -131,25 +164,15 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         # Add disp 1 lower
         disp_1_lower = dsp.get_disp_1_lower()
-        start_index, end_index = _get_start_end_indexes(start_i_, len(disp_1_lower), sample_len, end_limit)
-        print(f"{start_index=}")
-        print(f"{end_index=}")
-        disp_1_lower = disp_1_lower[start_index:end_index]
-        interval = disp_1_lower["timestamp"].iat[1] - disp_1_lower["timestamp"].iat[0]
-        last_timestamp = disp_1_lower["timestamp"].iat[-1]
-        last_disp = disp_1_lower["disp"].iat[-1]
-        if len(disp_1_lower) < sample_len:
-            add_len = sample_len - len(disp_1_lower)
-            add_empty_disp = pd.DataFrame(
-                {
-                    "timestamp": [last_timestamp + interval * t for t in range(1, add_len + 1)],
-                    "disp": [last_disp]*add_len,
-                }
-            )
-            disp_1_lower = pd.concat([disp_1_lower, add_empty_disp])
+        disp_1_lower = pd.merge(timestamp_mask, disp_1_lower, on="timestamp", how="left")
+        last_disp = _get_last_presented_value(disp_1_lower["disp"])
+        if last_disp is None or pd.isna(last_disp):
+            raise RuntimeError("Last disp is None.")
+        disp_1_lower.fillna(last_disp, inplace=True)
 
         if len(disp_1_lower) != sample_len:
             raise RuntimeError("Incorrect disp len.")
+
         # set_date_index_from_timestamp(disp_1)
         y_lim = (disp_1_lower["disp"].min() * 0.98, disp_1_lower["disp"].max() * 1.02)
         ax_i_ = ohlcv_charts_count - 1 + 1 # + i is ax index
@@ -167,22 +190,11 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         # Add disp 1 upper
 
         disp_1_upper = dsp.get_disp_1_upper()
-        start_index, end_index = _get_start_end_indexes(start_i_, len(disp_1_upper), sample_len, end_limit)
-        print(f"{start_index=}")
-        print(f"{end_index=}")
-        disp_1_upper = disp_1_upper[start_index:end_index]
-        interval = disp_1_upper["timestamp"].iat[1] - disp_1_upper["timestamp"].iat[0]
-        last_timestamp = disp_1_upper["timestamp"].iat[-1]
-        last_disp = disp_1_upper["disp"].iat[-1]
-        if len(disp_1_upper) < sample_len:
-            add_len = sample_len - len(disp_1_upper)
-            add_empty_disp = pd.DataFrame(
-                {
-                    "timestamp": [last_timestamp + interval * t for t in range(1, add_len + 1)],
-                    "disp": [last_disp] * add_len,
-                }
-            )
-            disp_1_upper = pd.concat([disp_1_upper, add_empty_disp])
+        disp_1_upper = pd.merge(timestamp_mask, disp_1_upper, on="timestamp", how="left")
+        last_disp = _get_last_presented_value(disp_1_upper["disp"])
+        if last_disp is None or pd.isna(last_disp):
+            raise RuntimeError("Last disp is None.")
+        disp_1_upper.fillna(last_disp, inplace=True)
 
         if len(disp_1_upper) != sample_len:
             raise RuntimeError("Incorrect disp len.")
@@ -199,6 +211,62 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         axs[ax_i_].plot(disp_1_upper["disp"].reset_index(drop=True), color='blue', linestyle='-')
         axs[ax_i_].set_title("disp_1_upper")
 
+
+        # Add orders data
+
+        closed_orders: List[ClosedOrder] = rd.VARS.simulator.closed_orders if rd.VARS.simulator else []
+        buy_orders_data = []
+        sell_orders_data = []
+        sl_orders_data = []
+
+        for closed_order in closed_orders:
+            if closed_order.trigger == "filled":
+                if isinstance(closed_order.order, BuyOrder):
+                    buy_orders_data.append(
+                        (
+                            closed_order.order.open_timestamp,
+                            closed_order.order.price
+                        )
+                    )
+                elif isinstance(closed_order.order, SellOrder):
+                    sell_orders_data.append(
+                        (
+                            closed_order.close_timestamp,
+                            closed_order.order.price
+                        )
+                    )
+            elif closed_order.trigger == "stop_loss":
+                sl_orders_data.append(
+                        (
+                            closed_order.close_timestamp,
+                            closed_order.order.stop_loss_price
+                        )
+                    )
+
+        buy_orders_df = pd.DataFrame(buy_orders_data, columns=["timestamp", "price"])
+        buy_orders_df = pd.merge(timestamp_mask, buy_orders_df, on="timestamp", how="left")
+
+        sell_orders_df = pd.DataFrame(sell_orders_data, columns=["timestamp", "price"])
+        sell_orders_df = pd.merge(timestamp_mask, sell_orders_df, on="timestamp", how="left")
+
+        sl_orders_df = pd.DataFrame(sl_orders_data, columns=["timestamp", "price"])
+        sl_orders_df = pd.merge(timestamp_mask, sl_orders_df, on="timestamp", how="left")
+
+        if not buy_orders_df["price"].isnull().all():
+            axs[ohlcv_charts_count-1].scatter(
+                pd.Series(list(range(len(timestamp_mask)))),
+                buy_orders_df["price"].reset_index(drop=True), color='blue', marker='o'
+            )
+        if not sell_orders_df["price"].isnull().all():
+            axs[ohlcv_charts_count-1].scatter(
+                pd.Series(list(range(len(timestamp_mask)))),
+                sell_orders_df["price"].reset_index(drop=True), color='green', marker='o'
+            )
+        if not sl_orders_df["price"].isnull().all():
+            axs[ohlcv_charts_count-1].scatter(
+                pd.Series(list(range(len(timestamp_mask)))),
+                sl_orders_df["price"].reset_index(drop=True), color='red', marker='o'
+            )
 
 
         global CURRENT_START_INDEX
@@ -361,7 +429,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         for ax in axs:
             ax.clear()
 
-        new_i = max(0, CURRENT_START_INDEX - 50)
+        new_i = max(0, CURRENT_START_INDEX - 200)
         configure_data(new_i)
         canvas.draw()
 
@@ -369,7 +437,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         for ax in axs:
             ax.clear()
 
-        new_i = CURRENT_START_INDEX + 50
+        new_i = CURRENT_START_INDEX + 200
         configure_data(new_i)
         canvas.draw()
 

@@ -1,8 +1,9 @@
+from typing import TypedDict, Any
+
 from data.binance_data_provider import BinanceDataProvider
 from data.currency_data import CurrencyData
 import datetime as dt
 
-from data.trading_simulator import TradingSimulator
 
 CURRENCY_DATAS = {}
 
@@ -11,10 +12,15 @@ def init_runtime_data():
         "BTCUSDT",
         "ETHUSDT",
         "ADAUSDT",
+        "BNBUSDT",
+        "DOGEUSDT",
+        "XRPUSDT",
+        "AVAXUSDT",
+        "SUIUSDT",
     )
 
-    lower_bound_timestamp = int(dt.datetime(2024, 11, 23).timestamp() * 1000)
-    upper_bound_timestamp = None
+    lower_bound_timestamp = int(dt.datetime(2024, 5, 23).timestamp() * 1000)
+    upper_bound_timestamp = int(dt.datetime.now().timestamp() * 1000)
     binance_data_provider = BinanceDataProvider()
 
     for symbol in symbols:
@@ -26,7 +32,11 @@ def init_runtime_data():
         CURRENCY_DATAS[symbol] = currency_data
         currency_data.update()
 
+print("DSCLMR")
 init_runtime_data()
 
-SIMULATOR = TradingSimulator()
-SIMULATOR.balance_stable = 1000
+class Vars:
+    def __init__(self):
+        self.simulator = None
+
+VARS = Vars()
