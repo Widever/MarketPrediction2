@@ -5,16 +5,6 @@ import runtime_data as rd
 # from data.runtime_data import CURRENCY_DATAS
 from data.validation import validate_disp_df
 
-set_1 = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "ADAUSDT",
-    "BNBUSDT",
-    "DOGEUSDT",
-    "XRPUSDT",
-    "AVAXUSDT",
-    "SUIUSDT",
-]
 
 def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.DataFrame:
 
@@ -67,6 +57,17 @@ def _get_lower_disp_for_set(set_: List[str]) -> pd.DataFrame:
 def _get_upper_disp_for_set(set_: List[str]) -> pd.DataFrame:
     return _get_basic_disp_for_set(set_, "high", "open")
 
+set_1 = [
+    "BTCUSDT",
+    "ETHUSDT",
+    # "ADAUSDT",
+    # "BNBUSDT",
+    # "DOGEUSDT",
+    # "XRPUSDT",
+    # "AVAXUSDT",
+    # "SUIUSDT",
+]
+
 def get_disp_1_lower() -> pd.DataFrame:
     disp = _get_lower_disp_for_set(set_1)
 
@@ -80,6 +81,70 @@ def get_disp_1_lower() -> pd.DataFrame:
 
 def get_disp_1_upper() -> pd.DataFrame:
     disp = _get_upper_disp_for_set(set_1)
+
+    validate_disp_df(disp)
+
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+        raise RuntimeError("Disp len is invalid.")
+
+    return disp
+
+set_2 = [
+    # "BTCUSDT",
+    # "ETHUSDT",
+    "ADAUSDT",
+    "BNBUSDT",
+    "DOGEUSDT",
+    "XRPUSDT",
+    "AVAXUSDT",
+    "SUIUSDT",
+]
+
+def get_disp_2_lower() -> pd.DataFrame:
+    disp = _get_lower_disp_for_set(set_2)
+
+    validate_disp_df(disp)
+
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+        raise RuntimeError("Disp len is invalid.")
+
+    return disp
+
+
+def get_disp_2_upper() -> pd.DataFrame:
+    disp = _get_upper_disp_for_set(set_2)
+
+    validate_disp_df(disp)
+
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+        raise RuntimeError("Disp len is invalid.")
+
+    return disp
+
+set_3 = [
+    # "BTCUSDT",
+    # "ETHUSDT",
+    # "ADAUSDT",
+    # "BNBUSDT",
+    # "DOGEUSDT",
+    "XRPUSDT",
+    "AVAXUSDT",
+    "SUIUSDT",
+]
+
+def get_disp_3_lower() -> pd.DataFrame:
+    disp = _get_lower_disp_for_set(set_3)
+
+    validate_disp_df(disp)
+
+    if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
+        raise RuntimeError("Disp len is invalid.")
+
+    return disp
+
+
+def get_disp_3_upper() -> pd.DataFrame:
+    disp = _get_upper_disp_for_set(set_3)
 
     validate_disp_df(disp)
 

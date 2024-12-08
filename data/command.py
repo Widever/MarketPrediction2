@@ -13,7 +13,7 @@ def run():
     importlib.reload(chb)
     importlib.reload(tb)
     importlib.reload(ts)
-
+    #
     # simulator = ts.TradingSimulator()
     # simulator.balance_stable = 1000
     # simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
@@ -21,9 +21,9 @@ def run():
     # rd.VARS.simulator = simulator
     # print("Simulator instance updated.")
 
-    # tb.TradingBot().trade(1000)
+    tb.TradingBot().trade(5000)
     # rd.VARS.simulator.reset()
     # rd.VARS.simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
     rd.VARS.simulator.info()
-    chb.run(0)
+    # chb.run(0)
 

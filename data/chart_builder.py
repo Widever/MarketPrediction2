@@ -102,7 +102,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
 
     ohlcv_charts_count = len(show_klines_for_currencies)
-    additional_charts_count = 2
+    additional_charts_count = 3
     fig, axs = plt.subplots(
         ohlcv_charts_count + additional_charts_count,
         1,
@@ -162,7 +162,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
             axs[ax_i_].set_title(symbol_)
 
-        # Add disp 1 lower
+        # Add disp 1 lower =============================================================================
         disp_1_lower = dsp.get_disp_1_lower()
         disp_1_lower = pd.merge(timestamp_mask, disp_1_lower, on="timestamp", how="left")
         last_disp = _get_last_presented_value(disp_1_lower["disp"])
@@ -187,32 +187,80 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         axs[ax_i_].set_title("disp_1_lower")
 
 
-        # Add disp 1 upper
+        # Add disp 1 upper ===========================================================================
 
-        disp_1_upper = dsp.get_disp_1_upper()
-        disp_1_upper = pd.merge(timestamp_mask, disp_1_upper, on="timestamp", how="left")
-        last_disp = _get_last_presented_value(disp_1_upper["disp"])
+        # disp_1_upper = dsp.get_disp_1_upper()
+        # disp_1_upper = pd.merge(timestamp_mask, disp_1_upper, on="timestamp", how="left")
+        # last_disp = _get_last_presented_value(disp_1_upper["disp"])
+        # if last_disp is None or pd.isna(last_disp):
+        #     raise RuntimeError("Last disp is None.")
+        # disp_1_upper.fillna(last_disp, inplace=True)
+        #
+        # if len(disp_1_upper) != sample_len:
+        #     raise RuntimeError("Incorrect disp len.")
+        # # set_date_index_from_timestamp(disp_1)
+        # y_lim = (disp_1_upper["disp"].min() * 0.98, disp_1_upper["disp"].max() * 1.02)
+        # ax_i_ = ohlcv_charts_count - 1 + 2  # + i is ax index
+        # # mpf.plot(disp_1["disp"], type='line', ax=axs[ax_i_], ylabel="", ylim=y_lim)
+        # if (
+        #         disp_1_upper["timestamp"].iat[0] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[0] or
+        #         disp_1_upper["timestamp"].iat[-1] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[-1]
+        # ):
+        #     raise RuntimeError("Incorrect disp after sampling.")
+        #
+        # axs[ax_i_].plot(disp_1_upper["disp"].reset_index(drop=True), color='blue', linestyle='-')
+        # axs[ax_i_].set_title("disp_1_upper")
+
+        # Add disp 2 lower =====================================================================
+        disp_2_lower = dsp.get_disp_2_lower()
+        disp_2_lower = pd.merge(timestamp_mask, disp_2_lower, on="timestamp", how="left")
+        last_disp = _get_last_presented_value(disp_2_lower["disp"])
         if last_disp is None or pd.isna(last_disp):
             raise RuntimeError("Last disp is None.")
-        disp_1_upper.fillna(last_disp, inplace=True)
+        disp_2_lower.fillna(last_disp, inplace=True)
 
-        if len(disp_1_upper) != sample_len:
+        if len(disp_2_lower) != sample_len:
             raise RuntimeError("Incorrect disp len.")
+
         # set_date_index_from_timestamp(disp_1)
-        y_lim = (disp_1_upper["disp"].min() * 0.98, disp_1_upper["disp"].max() * 1.02)
+        y_lim = (disp_2_lower["disp"].min() * 0.98, disp_2_lower["disp"].max() * 1.02)
         ax_i_ = ohlcv_charts_count - 1 + 2  # + i is ax index
         # mpf.plot(disp_1["disp"], type='line', ax=axs[ax_i_], ylabel="", ylim=y_lim)
         if (
-                disp_1_upper["timestamp"].iat[0] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[0] or
-                disp_1_upper["timestamp"].iat[-1] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[-1]
+                disp_2_lower["timestamp"].iat[0] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[0] or
+                disp_2_lower["timestamp"].iat[-1] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[-1]
         ):
             raise RuntimeError("Incorrect disp after sampling.")
 
-        axs[ax_i_].plot(disp_1_upper["disp"].reset_index(drop=True), color='blue', linestyle='-')
-        axs[ax_i_].set_title("disp_1_upper")
+        axs[ax_i_].plot(disp_2_lower["disp"].reset_index(drop=True), color='blue', linestyle='-')
+        axs[ax_i_].set_title("disp_2_lower")
+
+        # Add disp 3 lower =====================================================================
+        disp_3_lower = dsp.get_disp_3_lower()
+        disp_3_lower = pd.merge(timestamp_mask, disp_3_lower, on="timestamp", how="left")
+        last_disp = _get_last_presented_value(disp_3_lower["disp"])
+        if last_disp is None or pd.isna(last_disp):
+            raise RuntimeError("Last disp is None.")
+        disp_3_lower.fillna(last_disp, inplace=True)
+
+        if len(disp_3_lower) != sample_len:
+            raise RuntimeError("Incorrect disp len.")
+
+        # set_date_index_from_timestamp(disp_1)
+        y_lim = (disp_3_lower["disp"].min() * 0.98, disp_3_lower["disp"].max() * 1.02)
+        ax_i_ = ohlcv_charts_count - 1 + 3  # + i is ax index
+        # mpf.plot(disp_1["disp"], type='line', ax=axs[ax_i_], ylabel="", ylim=y_lim)
+        if (
+                disp_3_lower["timestamp"].iat[0] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[0] or
+                disp_3_lower["timestamp"].iat[-1] != ohlcv_datas[show_klines_for_currencies[0]]["timestamp"].iat[-1]
+        ):
+            raise RuntimeError("Incorrect disp after sampling.")
+
+        axs[ax_i_].plot(disp_3_lower["disp"].reset_index(drop=True), color='blue', linestyle='-')
+        axs[ax_i_].set_title("disp_3_lower")
 
 
-        # Add orders data
+        # Add orders data =======================================================================
 
         closed_orders: List[ClosedOrder] = rd.VARS.simulator.closed_orders if rd.VARS.simulator else []
         buy_orders_data = []
@@ -340,8 +388,8 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
                             CURRENT_LINES.append((hline, ydata, annot))
 
                             lines_y = (CURRENT_LINES[0][1], CURRENT_LINES[1][1])
-                            change = (lines_y[1] / lines_y[0] - 1) * 100
-                            annot_text = f"to {round(lines_y[1], 3)}, {'+' if change > 0 else ''}{round(change, 3)}%"
+                            change_ = (lines_y[1] / lines_y[0] - 1) * 100
+                            annot_text = f"to {round(lines_y[1], 3)}, {'+' if change_ > 0 else ''}{round(change_, 3)}%"
                             annot.set_text(annot_text)
                     elif TOOL_NAME == "info":
                         for l, price, annot in CURRENT_LINES:
