@@ -217,11 +217,27 @@ class TradingSimulator:
         self.open_orders = []
 
     def info(self):
+        buy_orders_data = []
+        sell_orders_data = []
+        sl_orders_data = []
+
+        for closed_order in self.closed_orders:
+            if closed_order.trigger == "filled":
+                if isinstance(closed_order.order, BuyOrder):
+                    buy_orders_data.append(closed_order)
+                elif isinstance(closed_order.order, SellOrder):
+                    sell_orders_data.append(closed_order)
+            elif closed_order.trigger == "stop_loss":
+                sl_orders_data.append(closed_order)
+
         msg = (
             f"balance: {self.balance}\n"
             f"current_index: {self.current_index}\n"
             f"open_orders: {len(self.open_orders)}\n"
             f"closed_orders: {len(self.closed_orders)}\n"
+            f"- buy_orders: {len(buy_orders_data)}\n"
+            f"- sell_orders: {len(sell_orders_data)}\n"
+            f"- stop_loss_orders: {len(sl_orders_data)}\n"
         )
 
         print(msg)

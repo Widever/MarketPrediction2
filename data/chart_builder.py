@@ -9,6 +9,7 @@ import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import runtime_data as rd
+import trading_bot as tb
 
 import dispersion as dsp
 from data.order import ClosedOrder, BuyOrder, SellOrder
@@ -102,7 +103,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
 
     ohlcv_charts_count = len(show_klines_for_currencies)
-    additional_charts_count = 3
+    additional_charts_count = 4
     fig, axs = plt.subplots(
         ohlcv_charts_count + additional_charts_count,
         1,
@@ -112,6 +113,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
     # Adjust figure padding
     fig.subplots_adjust(left=0.03, right=0.87, top=0.85, bottom=0.2, hspace=0.4)
     importlib.reload(dsp)
+    importlib.reload(tb)
 
     def configure_data(start_i_=start_i):
         ohlcv_datas = {}
@@ -319,6 +321,34 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         global CURRENT_START_INDEX
         CURRENT_START_INDEX = start_i_
+
+        # Add monotone sum data =======================================================
+
+        mask_index = 0
+        mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
+        monotone_sums = []
+        for i in range(len(rd.VARS.simulator.ohlcv_df)):
+            simulator_timestamp = rd.VARS.simulator.ohlcv_df["timestamp"].iat[i]
+            if simulator_timestamp == mask_timestamp:
+                if mask_index == len(timestamp_mask) - 1:
+                    break
+                mask_index += 1
+                mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
+
+                monotone_sum = sum(tb.TradingBot().get_last_monotone_by_lower(i))
+                monotone_sums.append(monotone_sum)
+
+        if len(monotone_sums) < len(timestamp_mask):
+            monotone_sums = monotone_sums + [monotone_sums[-1]] * (len(timestamp_mask) - len(monotone_sums))
+
+        ax_i_ = ohlcv_charts_count - 1 + 4  # + i is ax index
+        if len(monotone_sums) != len(timestamp_mask):
+            raise RuntimeError(f"{len(monotone_sums)=} != {len(timestamp_mask)=}")
+
+        axs[ax_i_].plot(monotone_sums, color='blue', linestyle='-')
+        axs[ax_i_].set_title("monotone sums")
+
+
 
     configure_data()
 

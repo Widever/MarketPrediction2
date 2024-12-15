@@ -41,9 +41,14 @@ def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.D
 
     disp_df = pd.DataFrame()
     disp_df["timestamp"] = from_to_changes["timestamp"]
-    for i in range(1, len(set_)):
+    for i, symbol in enumerate(set_):
+        if i == 0:
+            continue
+        currency_data = rd.CURRENCY_DATAS.get(symbol)
         change_from_t = from_to_changes["target"] - from_to_changes[f"ch_{i}"]
-        change_from_t = change_from_t.abs()
+
+        volume_k = 0.005 * currency_data.ohlcv_df["volume"].max()
+        change_from_t = change_from_t.abs()#  * volume_k
         if i == 1:
             disp_df["disp"] = change_from_t
         else:
@@ -51,16 +56,47 @@ def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.D
 
     return disp_df
 
+def _normalize_peaks(disp_df: pd.DataFrame):
+    disps = sorted(disp_df["disp"])
+
+    norm_index = int(len(disps) * 0.97)
+    tear_1_index = int(len(disps) * 0.98)
+    tear_2_index = int(len(disps) * 0.98)
+    tear_3_index = int(len(disps) * 0.99)
+
+    norm_value = disps[norm_index]
+    tear_1_value = disps[tear_1_index]
+    tear_2_value = disps[tear_2_index]
+    tear_3_value = disps[tear_3_index]
+    if not isinstance(norm_value, float):
+        raise RuntimeError(f"Invalid norm value: {norm_value}.")
+
+    def normalize_func(x):
+        if x > tear_3_value:
+            return norm_value * 5
+        elif x > tear_2_value:
+            return norm_value * 4
+        elif x > tear_1_value:
+            return norm_value * 3
+        elif x > norm_value:
+            return norm_value * 2
+        else:
+            return x
+
+    disp_df["disp"] = disp_df["disp"].apply(normalize_func)
+
 def _get_lower_disp_for_set(set_: List[str]) -> pd.DataFrame:
-    return _get_basic_disp_for_set(set_, "open", "low")
+    disp_df = _get_basic_disp_for_set(set_, "open", "low")
+    _normalize_peaks(disp_df)
+    return disp_df
 
 def _get_upper_disp_for_set(set_: List[str]) -> pd.DataFrame:
     return _get_basic_disp_for_set(set_, "high", "open")
 
 set_1 = [
     "BTCUSDT",
-    "ETHUSDT",
-    # "ADAUSDT",
+    # "ETHUSDT",
+    "ADAUSDT",
     # "BNBUSDT",
     # "DOGEUSDT",
     # "XRPUSDT",
@@ -91,13 +127,13 @@ def get_disp_1_upper() -> pd.DataFrame:
 
 set_2 = [
     # "BTCUSDT",
-    # "ETHUSDT",
+    "ETHUSDT",
     "ADAUSDT",
     "BNBUSDT",
-    "DOGEUSDT",
-    "XRPUSDT",
-    "AVAXUSDT",
-    "SUIUSDT",
+    # "DOGEUSDT",
+    # "XRPUSDT",
+    # "AVAXUSDT",
+    # "SUIUSDT",
 ]
 
 def get_disp_2_lower() -> pd.DataFrame:
@@ -124,12 +160,12 @@ def get_disp_2_upper() -> pd.DataFrame:
 set_3 = [
     # "BTCUSDT",
     # "ETHUSDT",
-    # "ADAUSDT",
+    "ADAUSDT",
     # "BNBUSDT",
-    # "DOGEUSDT",
+    "DOGEUSDT",
     "XRPUSDT",
     "AVAXUSDT",
-    "SUIUSDT",
+    # "SUIUSDT",
 ]
 
 def get_disp_3_lower() -> pd.DataFrame:
