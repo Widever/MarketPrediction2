@@ -73,21 +73,31 @@ def _normalize_peaks(disp_df: pd.DataFrame):
 
     def normalize_func(x):
         if x > tear_3_value:
-            return norm_value * 5
-        elif x > tear_2_value:
-            return norm_value * 4
-        elif x > tear_1_value:
-            return norm_value * 3
-        elif x > norm_value:
             return norm_value * 2
+        elif x > tear_2_value:
+            return norm_value * 1.5
+        elif x > tear_1_value:
+            return norm_value * 1.3
+        elif x > norm_value:
+            return norm_value * 1.2
         else:
             return x
+
+    disp_df["disp"] = disp_df["disp"].apply(normalize_func)
+
+def _normalize_range(disp_df: pd.DataFrame):
+    max_disp = disp_df["disp"].max()
+    min_disp = disp_df["disp"].min()
+
+    def normalize_func(x):
+        return (x - min_disp) / (max_disp - min_disp)
 
     disp_df["disp"] = disp_df["disp"].apply(normalize_func)
 
 def _get_lower_disp_for_set(set_: List[str]) -> pd.DataFrame:
     disp_df = _get_basic_disp_for_set(set_, "open", "low")
     _normalize_peaks(disp_df)
+    _normalize_range(disp_df)
     return disp_df
 
 def _get_upper_disp_for_set(set_: List[str]) -> pd.DataFrame:

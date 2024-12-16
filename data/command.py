@@ -23,7 +23,7 @@ def run():
 
     rd.VARS.simulator.reset()
     rd.VARS.simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
-    tb.TradingBot().trade(5000)
+    tb.TradingBot().trade(10000)
     rd.VARS.simulator.info()
     # chb.run(0)
 

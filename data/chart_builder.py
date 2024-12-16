@@ -1,6 +1,7 @@
 import importlib
 from typing import List
 
+import numpy
 import pandas as pd
 import mplfinance as mpf
 import matplotlib.pyplot as plt
@@ -87,6 +88,16 @@ def _get_timestamp_mask(primary_timestamp_data: pd.DataFrame, sample_len: int) -
 
 def _get_last_presented_value(reversible_):
     return next((x for x in reversed(reversible_) if x is not None and not pd.isna(x)), None)
+
+def _normalize_range_monotone_sums(monotone_sums: list):
+
+    res = []
+    for x in monotone_sums:
+        res.append(tb.TradingBot().normalize_monotone_sum(x))
+
+    return res
+
+
 
 def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
     if start_i < 0:
@@ -187,6 +198,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         axs[ax_i_].plot(disp_1_lower["disp"].reset_index(drop=True), color='blue', linestyle='-')
         axs[ax_i_].set_title("disp_1_lower")
+        axs[ax_i_].set_ylim(0, 1)
 
 
         # Add disp 1 upper ===========================================================================
@@ -236,6 +248,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         axs[ax_i_].plot(disp_2_lower["disp"].reset_index(drop=True), color='blue', linestyle='-')
         axs[ax_i_].set_title("disp_2_lower")
+        axs[ax_i_].set_ylim(0, 1)
 
         # Add disp 3 lower =====================================================================
         disp_3_lower = dsp.get_disp_3_lower()
@@ -260,6 +273,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         axs[ax_i_].plot(disp_3_lower["disp"].reset_index(drop=True), color='blue', linestyle='-')
         axs[ax_i_].set_title("disp_3_lower")
+        axs[ax_i_].set_ylim(0, 1)
 
 
         # Add orders data =======================================================================
@@ -345,9 +359,19 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         if len(monotone_sums) != len(timestamp_mask):
             raise RuntimeError(f"{len(monotone_sums)=} != {len(timestamp_mask)=}")
 
-        axs[ax_i_].plot(monotone_sums, color='blue', linestyle='-')
-        axs[ax_i_].set_title("monotone sums")
+        disp_sum = disp_1_lower["disp"].reset_index(drop=True) * 1.4
+        disp_sum += disp_2_lower["disp"].reset_index(drop=True) * 0.8
+        disp_sum += disp_3_lower["disp"].reset_index(drop=True) * 0.8
+        # disp_sum = numpy.minimum(disp_sum, 1)
 
+        monotone_sums = _normalize_range_monotone_sums(monotone_sums)
+        monotone_sums = (1 - pd.Series(monotone_sums)) * 3 - disp_sum
+        # monotone_sums = monotone_sums - disp_sum
+
+        axs[ax_i_].plot(monotone_sums, color='blue', linestyle='-')
+        # axs[ax_i_].plot(disp_sum, color='red', linestyle='-')
+        axs[ax_i_].set_title("monotone sums")
+        # axs[ax_i_].set_ylim(-3.3, 3.3)
 
 
     configure_data()

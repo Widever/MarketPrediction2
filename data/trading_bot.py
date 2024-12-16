@@ -18,7 +18,7 @@ class TradingBot:
 
 
     def get_disp_changes(self, disp) -> pd.DataFrame:
-        lower_limit_disp = sorted(disp["disp"])[int(len(disp)*0.7)]
+        lower_limit_disp = sorted(disp["disp"])[int(len(disp)*0.5)]
         print(f"{lower_limit_disp=}")
         prev_disp_col = disp["disp"].reset_index(drop=True)[:len(disp)-1].reset_index(drop=True)
         prev_disp_col = numpy.maximum(lower_limit_disp, prev_disp_col)
@@ -72,6 +72,17 @@ class TradingBot:
                     break
         return monotone_by_lower
 
+    def normalize_monotone_sum(self, x):
+        min_limit = -6
+        max_limit = 6
+
+        if x > max_limit:
+           return 1
+        elif x < min_limit:
+            return 0
+        else:
+            return (x - min_limit) / (max_limit - min_limit)
+
     def trade(self, n: int):
         importlib.reload(dsp)
         lower_disp_1 = dsp.get_disp_1_lower()
@@ -105,31 +116,48 @@ class TradingBot:
                         break
 
                     last_monotone = self.get_last_monotone_by_lower(rd.VARS.simulator.current_index)
-                    last_monotone_sum = sum(last_monotone)
+                    last_monotone_sum = self.normalize_monotone_sum(sum(last_monotone))
 
-                    if last_monotone_sum > 0.9:
+                    current_disp_1 = lower_disp_1["disp"].reset_index(drop=True).at[rd.VARS.simulator.current_index]
+                    current_disp_2 = lower_disp_2["disp"].reset_index(drop=True).at[rd.VARS.simulator.current_index]
+                    current_disp_3 = lower_disp_3["disp"].reset_index(drop=True).at[rd.VARS.simulator.current_index]
+
+                    disp_sum = current_disp_1 * 1.5 + current_disp_2 * 0.8 + current_disp_3 * 0.8
+                    f_dist = (1 - last_monotone_sum) * 3 - disp_sum
+                    if f_dist < 1.76:
                         break
 
-                    last_n_timestamps = [
-                        rd.VARS.simulator.ohlcv_df["timestamp"].at[rd.VARS.simulator.current_index-i] for i in range(n_cumulative)
-                    ]
+                    # if last_monotone_sum > 0.1:
+                    #     break
 
-                    last_n_disp_1_changes = [lower_disp_1_changes["changes"][t] for t in last_n_timestamps]
-                    last_n_disp_2_changes = [lower_disp_2_changes["changes"][t] for t in last_n_timestamps]
-                    last_n_disp_3_changes = [lower_disp_3_changes["changes"][t] for t in last_n_timestamps]
+                    # last_n_timestamps = [
+                    #     rd.VARS.simulator.ohlcv_df["timestamp"].at[rd.VARS.simulator.current_index-i] for i in range(n_cumulative)
+                    # ]
 
-                    disp_1_change_cum = self.get_cumulative_disp_change(last_n_disp_1_changes)
-                    disp_2_change_cum = self.get_cumulative_disp_change(last_n_disp_2_changes)
-                    disp_3_change_cum = self.get_cumulative_disp_change(last_n_disp_3_changes)
+                    # last_n_disp_1_changes = [lower_disp_1_changes["changes"][t] for t in last_n_timestamps]
+                    # last_n_disp_2_changes = [lower_disp_2_changes["changes"][t] for t in last_n_timestamps]
+                    # last_n_disp_3_changes = [lower_disp_3_changes["changes"][t] for t in last_n_timestamps]
+                    #
+                    # disp_1_change_cum = self.get_cumulative_disp_change(last_n_disp_1_changes)
+                    # disp_2_change_cum = self.get_cumulative_disp_change(last_n_disp_2_changes)
+                    # disp_3_change_cum = self.get_cumulative_disp_change(last_n_disp_3_changes)
 
-                    if disp_1_change_cum < 100:
-                        break
 
                     # if len(last_monotone) > 2 and last_monotone_sum < -1. and disp_1_change_cum < 200:
                     #     break
 
-                    if disp_1_change_cum > 100 and disp_2_change_cum > 100 and disp_3_change_cum > 100:
-                        break
+                    # disp_gt_results = [disp_1_change_cum > 200, disp_2_change_cum > 200, disp_3_change_cum > 200]
+                    # disp_gt_results = [x for x in disp_gt_results if x]
+                    #
+                    # if last_monotone_sum < -2.:
+                    #     break
+                    #
+                    # if len(disp_gt_results) > 1:
+                    #     pass
+                    # elif disp_1_change_cum > 300:
+                    #     pass
+                    # else:
+                    #     break
 
                     current_price = rd.VARS.simulator.ohlcv_df["close"].at[rd.VARS.simulator.current_index]
                     price_to_sell = current_price * 1.01
