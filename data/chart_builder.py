@@ -114,7 +114,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
 
     ohlcv_charts_count = len(show_klines_for_currencies)
-    additional_charts_count = 4
+    additional_charts_count = 5
     fig, axs = plt.subplots(
         ohlcv_charts_count + additional_charts_count,
         1,
@@ -336,11 +336,12 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         global CURRENT_START_INDEX
         CURRENT_START_INDEX = start_i_
 
-        # Add monotone sum data =======================================================
+        # Add f_disp =======================================================
 
         mask_index = 0
         mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
         monotone_sums = []
+        monotone_ampls = []
         for i in range(len(rd.VARS.simulator.ohlcv_df)):
             simulator_timestamp = rd.VARS.simulator.ohlcv_df["timestamp"].iat[i]
             if simulator_timestamp == mask_timestamp:
@@ -349,29 +350,48 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
                 mask_index += 1
                 mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
 
-                monotone_sum = sum(tb.TradingBot().get_last_monotone_by_lower(i))
+                monotone_seq = tb.TradingBot().get_last_monotone_by_lower(i)
+                monotone_sum = sum(monotone_seq)
+
+                range_ampl = tb.TradingBot().get_range_ampl(i, len(monotone_seq))
+                monotone_ampls.append(range_ampl)
+
                 monotone_sums.append(monotone_sum)
 
         if len(monotone_sums) < len(timestamp_mask):
             monotone_sums = monotone_sums + [monotone_sums[-1]] * (len(timestamp_mask) - len(monotone_sums))
 
+        if len(monotone_ampls) < len(timestamp_mask):
+            monotone_ampls = monotone_ampls + [monotone_ampls[-1]] * (len(timestamp_mask) - len(monotone_ampls))
+
         ax_i_ = ohlcv_charts_count - 1 + 4  # + i is ax index
         if len(monotone_sums) != len(timestamp_mask):
             raise RuntimeError(f"{len(monotone_sums)=} != {len(timestamp_mask)=}")
 
-        disp_sum = disp_1_lower["disp"].reset_index(drop=True) * 1.4
+        disp_sum = disp_1_lower["disp"].reset_index(drop=True) * 1.5
         disp_sum += disp_2_lower["disp"].reset_index(drop=True) * 0.8
         disp_sum += disp_3_lower["disp"].reset_index(drop=True) * 0.8
         # disp_sum = numpy.minimum(disp_sum, 1)
 
         monotone_sums = _normalize_range_monotone_sums(monotone_sums)
-        monotone_sums = (1 - pd.Series(monotone_sums)) * 3 - disp_sum
+        f_disp = (1 - pd.Series(monotone_sums)) * 3 - disp_sum
         # monotone_sums = monotone_sums - disp_sum
 
-        axs[ax_i_].plot(monotone_sums, color='blue', linestyle='-')
+        axs[ax_i_].plot(f_disp, color='blue', linestyle='-')
         # axs[ax_i_].plot(disp_sum, color='red', linestyle='-')
-        axs[ax_i_].set_title("monotone sums")
+        axs[ax_i_].set_title("f disp")
         # axs[ax_i_].set_ylim(-3.3, 3.3)
+
+
+        # ADD MONOTONE AMPLS =======================================================================
+
+        ax_i_ = ohlcv_charts_count - 1 + 5  # + i is ax index
+        if len(monotone_ampls) != len(timestamp_mask):
+            raise RuntimeError(f"{len(monotone_ampls)=} != {len(timestamp_mask)=}")
+
+        axs[ax_i_].plot(monotone_ampls, color='blue', linestyle='-')
+        axs[ax_i_].set_title("monotone ampls")
+
 
 
     configure_data()
