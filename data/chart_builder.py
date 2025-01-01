@@ -126,6 +126,9 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
     importlib.reload(dsp)
     importlib.reload(tb)
 
+    disp_1 = dsp.get_disp_1_lower()
+    disp_2 = dsp.get_disp_2_lower()
+    disp_3 = dsp.get_disp_3_lower()
     def configure_data(start_i_=start_i):
         ohlcv_datas = {}
         global OHLCV_DATA_DFS
@@ -340,7 +343,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
 
         mask_index = 0
         mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
-        monotone_sums = []
+        f_disps = []
         monotone_ampls = []
         for i in range(len(rd.VARS.simulator.ohlcv_df)):
             simulator_timestamp = rd.VARS.simulator.ohlcv_df["timestamp"].iat[i]
@@ -351,33 +354,30 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
                 mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
 
                 monotone_seq = tb.TradingBot().get_last_monotone_by_lower(i)
-                monotone_sum = sum(monotone_seq)
 
                 range_ampl = tb.TradingBot().get_range_ampl(i, len(monotone_seq))
                 monotone_ampls.append(range_ampl)
 
-                monotone_sums.append(monotone_sum)
+                f_disps.append(tb.TradingBot().get_f_disp(disp_1, disp_2, disp_3, i))
 
-        if len(monotone_sums) < len(timestamp_mask):
-            monotone_sums = monotone_sums + [monotone_sums[-1]] * (len(timestamp_mask) - len(monotone_sums))
+        if len(f_disps) < len(timestamp_mask):
+            f_disps = f_disps + [f_disps[-1]] * (len(timestamp_mask) - len(f_disps))
 
         if len(monotone_ampls) < len(timestamp_mask):
             monotone_ampls = monotone_ampls + [monotone_ampls[-1]] * (len(timestamp_mask) - len(monotone_ampls))
 
         ax_i_ = ohlcv_charts_count - 1 + 4  # + i is ax index
-        if len(monotone_sums) != len(timestamp_mask):
-            raise RuntimeError(f"{len(monotone_sums)=} != {len(timestamp_mask)=}")
+        if len(f_disps) != len(timestamp_mask):
+            raise RuntimeError(f"{len(f_disps)=} != {len(timestamp_mask)=}")
 
         disp_sum = disp_1_lower["disp"].reset_index(drop=True) * 1.5
         disp_sum += disp_2_lower["disp"].reset_index(drop=True) * 0.8
         disp_sum += disp_3_lower["disp"].reset_index(drop=True) * 0.8
         # disp_sum = numpy.minimum(disp_sum, 1)
 
-        monotone_sums = _normalize_range_monotone_sums(monotone_sums)
-        f_disp = (1 - pd.Series(monotone_sums)) * 3 - disp_sum
-        # monotone_sums = monotone_sums - disp_sum
+        f_disps = _normalize_range_monotone_sums(f_disps)
 
-        axs[ax_i_].plot(f_disp, color='blue', linestyle='-')
+        axs[ax_i_].plot(f_disps, color='blue', linestyle='-')
         # axs[ax_i_].plot(disp_sum, color='red', linestyle='-')
         axs[ax_i_].set_title("f disp")
         # axs[ax_i_].set_ylim(-3.3, 3.3)

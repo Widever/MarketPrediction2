@@ -92,6 +92,18 @@ class TradingBot:
         else:
             return (x - min_limit) / (max_limit - min_limit)
 
+    def get_f_disp(self, disp_1, disp_2, disp_3, index):
+        last_monotone = self.get_last_monotone_by_lower(index)
+        last_monotone_sum = self.normalize_monotone_sum(sum(last_monotone))
+
+        current_disp_1 = disp_1["disp"].reset_index(drop=True).at[index]
+        current_disp_2 = disp_2["disp"].reset_index(drop=True).at[index]
+        current_disp_3 = disp_3["disp"].reset_index(drop=True).at[index]
+
+        disp_sum = current_disp_1 * 1.5 + current_disp_2 * 0.8 + current_disp_3 * 0.8
+        f_disp = (1 - last_monotone_sum) * 3 - disp_sum
+        return f_disp
+
     def trade(self, n: int):
         importlib.reload(dsp)
         lower_disp_1 = dsp.get_disp_1_lower()
@@ -147,23 +159,20 @@ class TradingBot:
                     disp_2_change_cum = self.get_cumulative_disp_change(last_n_disp_2_changes)
                     disp_3_change_cum = self.get_cumulative_disp_change(last_n_disp_3_changes)
 
-                    disp_gt_results = [disp_1_change_cum > 300, disp_2_change_cum > 300, disp_3_change_cum > 500]
-                    # disp_gt_results = [current_disp_1 > 0.3, current_disp_2 > 0.4, current_disp_3 > 0.5]
+                    # disp_gt_results = [disp_1_change_cum > 300, disp_2_change_cum > 300, disp_3_change_cum > 500]
+                    disp_gt_results = [current_disp_1 > 0.2, current_disp_2 > 0.3, current_disp_3 > 0.4]
                     disp_gt_results = [x for x in disp_gt_results if x]
 
-                    if current_disp_1 < 0.3:
-                        break
+                    f_disps_n = min(rd.VARS.simulator.current_index, 10)
+                    last_n_f_disp = [self.get_f_disp(lower_disp_1, lower_disp_2, lower_disp_3, rd.VARS.simulator.current_index-i) for i in range(f_disps_n)]
 
-                    f_dist = (1 - last_monotone_sum) * 3 - disp_sum
-                    # if f_dist < 0.9:
-                    #     break
+                    if min(last_n_f_disp) < 0.55:
+                        break
 
                     if last_range_ampl < 1.2:
                         break
 
                     if len(disp_gt_results) > 0:
-                        pass
-                    elif disp_1_change_cum > 400:
                         pass
                     else:
                         break
