@@ -56,17 +56,22 @@ class CurrencyData:
         else:
             if (
                     self.upper_bound_timestamp is None or
-                    (last_timestamp := self.ohlcv_df["timestamp"][-1]) < self.upper_bound_timestamp
+                    (last_timestamp := int(self.ohlcv_df["timestamp"].iat[-1])) < self.upper_bound_timestamp
             ):
                 add_ohlcv_df = self.binance_data_provider.get_currency_ohlc_data(
                     self.symbol, last_timestamp, self.upper_bound_timestamp
                 )
 
-                if len(add_ohlcv_df) > 1:
+                if len(add_ohlcv_df) > 0:
 
-                    add_ohlcv_df = add_ohlcv_df[1:]
-                    new_ohlcv_df = pd.concat((self.ohlcv_df, add_ohlcv_df))
-                    print(f">>> Update {self.symbol}, add {len(add_ohlcv_df)} entries.")
+                    old_ohlc_df = self.ohlcv_df
+
+                    if old_ohlc_df["timestamp"].iat[-1] != add_ohlcv_df["timestamp"].iat[0]:
+                        raise RuntimeError("Add df should start with last timestamp in old df.")
+
+                    old_ohlc_df = old_ohlc_df[:-1]
+                    new_ohlcv_df = pd.concat((old_ohlc_df, add_ohlcv_df)).reset_index(drop=True)
+                    print(f">>> Update {self.symbol} with {len(add_ohlcv_df)} entries.")
                     self.ohlcv_df = new_ohlcv_df
 
         validate_ohlcv_df(self.ohlcv_df)
