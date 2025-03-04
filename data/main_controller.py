@@ -1,11 +1,22 @@
 import importlib
+import sys
 import traceback
 import command as cmd
 
+def flush_input():
+    try:
+        import msvcrt
+        while msvcrt.kbhit():
+            msvcrt.getch()
+    except ImportError:
+        import sys, termios    #for linux/unix
+        termios.tcflush(sys.stdin, termios.TCIOFLUSH)
+
+
 while True:
     try:
-        print("Enter to continue...")
-        input_ = input()
+        flush_input()
+        input_ = input("Enter to run command.py ...")
         if input_ == "stop":
             break
 

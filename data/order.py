@@ -33,3 +33,6 @@ class ClosedOrder:
         self.order: Order = order
         self.trigger: str = trigger
         self.close_timestamp: int = close_timestamp
+
+    def __str__(self):
+        return f"ClosedOrder: order_type={type(self.order)}, trigger={self.trigger}."

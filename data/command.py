@@ -23,11 +23,20 @@ def run():
     #
     # rd.VARS.simulator = simulator
     # print("Simulator instance updated.")
-    #
+
     # rd.VARS.simulator.reset()
     # rd.VARS.simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
-    tb.TradingBot().trade(3200)
-    rd.VARS.simulator.info()
+
+    # tb.TradingBot().trade(200)
+    # rd.VARS.simulator.info()
+
+    # tb.TradingBot().trade(3200, observe=True)
+    # rd.VARS.simulator.next()
+    # tb.TradingBot().perform()
+    # rd.VARS.simulator.info()
+    chb.run(max(0, rd.VARS.simulator.current_index - 199), sample_len=min(rd.VARS.simulator.current_index, 200))
+    # tb.TradingBot().perform()
+
 
     # update()
     # chb.run(6600)

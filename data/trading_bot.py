@@ -104,7 +104,19 @@ class TradingBot:
         f_disp = (1 - last_monotone_sum) * 3 - disp_sum
         return f_disp
 
-    def trade(self, n: int):
+    @classmethod
+    def perform(cls):
+        if rd.VARS.simulator.balance < 0.01:
+            print(f"Cant perform because balance < 0.01. index = {rd.VARS.simulator.current_index}.")
+            return
+
+        current_price = rd.VARS.simulator.ohlcv_df["close"].at[rd.VARS.simulator.current_index]
+        price_to_sell = current_price * 1.01
+        stop_loss = current_price * 0.98
+        rd.VARS.simulator.buy_all_instantly()
+        rd.VARS.simulator.order_sell_for_all(price_to_sell, stop_loss)
+
+    def trade(self, n: int, observe: bool = False):
         importlib.reload(dsp)
         lower_disp_1 = dsp.get_disp_1_lower()
         print("disp1")
@@ -177,11 +189,19 @@ class TradingBot:
                     else:
                         break
 
-                    current_price = rd.VARS.simulator.ohlcv_df["close"].at[rd.VARS.simulator.current_index]
-                    price_to_sell = current_price * 1.01
-                    stop_loss = current_price * 0.98
-                    rd.VARS.simulator.buy_all_instantly()
-                    rd.VARS.simulator.order_sell_for_all(price_to_sell, stop_loss)
+                    if observe:
+                        print(f"Observe: potential perform. index = {rd.VARS.simulator.current_index}")
+                        return
 
-            rd.VARS.simulator.next()
+                    self.perform()
 
+            events = rd.VARS.simulator.next()
+
+            if observe and len(events) > 0:
+                print(f"Events occurred, index = {rd.VARS.simulator.current_index}:")
+                for e in events:
+                    print("\t" + str(e))
+                return
+
+            if rd.VARS.simulator.current_index == len(rd.VARS.simulator.ohlcv_df) - 1:
+                return

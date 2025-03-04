@@ -65,13 +65,15 @@ class TradingSimulator:
 
         self.balance += order.quantity * order.stop_loss_price
 
-    def next(self):
+    def next(self) -> list:
+        events = []
+
         validate_ohlcv_df(self.ohlcv_df)
         self.ohlcv_df: pd.DataFrame
 
         if self.current_index == len(self.ohlcv_df) - 1:
             print(">>> next(): Last ohlc data reached.")
-            return
+            return events
 
         next_index = self.current_index + 1
         next_timestamp = self.ohlcv_df.at[next_index, "timestamp"]
@@ -92,29 +94,39 @@ class TradingSimulator:
                     )
 
                 self.execute_cancel_order(order)
-                self.closed_orders.append(ClosedOrder(order, next_timestamp, "expired"))
+                event_order = ClosedOrder(order, next_timestamp, "expired")
+                self.closed_orders.append(event_order)
+                events.append(event_order)
                 continue
 
             if isinstance(order, BuyOrder) and order.price > next_low_price:
                 self.execute_fill_order(order)
-                self.closed_orders.append(ClosedOrder(order, next_timestamp, "filled"))
+                event_order = ClosedOrder(order, next_timestamp, "filled")
+                self.closed_orders.append(event_order)
+                events.append(event_order)
                 continue
 
             if isinstance(order, SellOrder):
                 if order.stop_loss_price is not None and order.stop_loss_price > next_low_price:
                     self.execute_stop_loss_order(order)
-                    self.closed_orders.append(ClosedOrder(order, next_timestamp, "stop_loss"))
+                    event_order = ClosedOrder(order, next_timestamp, "stop_loss")
+                    self.closed_orders.append(event_order)
+                    events.append(event_order)
                     continue
 
                 if order.price < next_high_price:
                     self.execute_fill_order(order)
-                    self.closed_orders.append(ClosedOrder(order, next_timestamp, "filled"))
+                    event_order = ClosedOrder(order, next_timestamp, "filled")
+                    self.closed_orders.append(event_order)
+                    events.append(event_order)
                     continue
 
             remained_open_orders.append(order)
 
         self.open_orders = remained_open_orders
         self.current_index = next_index
+
+        return events
 
     def buy_all_instantly(self) -> str:
         current_price = self.ohlcv_df.at[self.current_index, "close"]
@@ -233,6 +245,7 @@ class TradingSimulator:
         msg = (
             f"balance: {self.balance}\n"
             f"current_index: {self.current_index}\n"
+            f"df_len: {len(self.ohlcv_df)}\n"
             f"open_orders: {len(self.open_orders)}\n"
             f"closed_orders: {len(self.closed_orders)}\n"
             f"- buy_orders: {len(buy_orders_data)}\n"
