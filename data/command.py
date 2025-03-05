@@ -30,12 +30,14 @@ def run():
     # tb.TradingBot().trade(200)
     # rd.VARS.simulator.info()
 
-    # tb.TradingBot().trade(3200, observe=True)
-    # rd.VARS.simulator.next()
-    # tb.TradingBot().perform()
-    # rd.VARS.simulator.info()
-    chb.run(max(0, rd.VARS.simulator.current_index - 199), sample_len=min(rd.VARS.simulator.current_index, 200))
-    # tb.TradingBot().perform()
+    if True or 1:
+        # tb.TradingBot().perform()
+        # rd.VARS.simulator.next()
+        tb.TradingBot().trade(200, observe=True)
+        chb.run(max(0, rd.VARS.simulator.current_index - 199), sample_len=min(rd.VARS.simulator.current_index, 200))
+    else:
+        rd.VARS.simulator.info()
+        tb.TradingBot().perform()
 
 
     # update()
