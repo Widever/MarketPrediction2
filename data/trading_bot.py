@@ -175,14 +175,14 @@ class TradingBot:
                     disp_gt_results = [current_disp_1 > 0.2, current_disp_2 > 0.3, current_disp_3 > 0.4]
                     disp_gt_results = [x for x in disp_gt_results if x]
 
-                    f_disps_n = min(rd.VARS.simulator.current_index, 10)
-                    last_n_f_disp = [self.get_f_disp(lower_disp_1, lower_disp_2, lower_disp_3, rd.VARS.simulator.current_index-i) for i in range(f_disps_n)]
-
-                    if min(last_n_f_disp) < 0.55:
-                        break
-
-                    if last_range_ampl < 1.2:
-                        break
+                    # f_disps_n = min(rd.VARS.simulator.current_index, 10)
+                    # last_n_f_disp = [self.get_f_disp(lower_disp_1, lower_disp_2, lower_disp_3, rd.VARS.simulator.current_index-i) for i in range(f_disps_n)]
+                    #
+                    # if min(last_n_f_disp) < 0.55:
+                    #     break
+                    #
+                    # if last_range_ampl < 1.2:
+                    #     break
 
                     if len(disp_gt_results) > 0:
                         pass

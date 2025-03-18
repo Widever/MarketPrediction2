@@ -19,6 +19,7 @@ class TradingSimulator:
 
         self.open_orders: list[Order] = []
         self.closed_orders: list[ClosedOrder] = []
+        self.skips: list[tuple[int, float]] = []
 
         self.ohlcv_df: pd.DataFrame | None = None
         self.current_index: int = self.start_index
@@ -33,6 +34,7 @@ class TradingSimulator:
 
         self.open_orders: list[Order] = []
         self.closed_orders: list[ClosedOrder] = []
+        self.skips: list[tuple[int, float]] = []
 
         self.ohlcv_df: pd.DataFrame | None = None
         self.current_index: int = self.start_index
@@ -127,6 +129,13 @@ class TradingSimulator:
         self.current_index = next_index
 
         return events
+
+    def skip(self):
+        current_price = self.ohlcv_df.at[self.current_index, "close"]
+        current_timestamp = self.ohlcv_df.at[self.current_index, "timestamp"]
+        self.skips.append((current_timestamp, current_price))
+        self.next()
+
 
     def buy_all_instantly(self) -> str:
         current_price = self.ohlcv_df.at[self.current_index, "close"]

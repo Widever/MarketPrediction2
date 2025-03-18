@@ -282,6 +282,7 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         # Add orders data =======================================================================
 
         closed_orders: List[ClosedOrder] = rd.VARS.simulator.closed_orders if rd.VARS.simulator else []
+        skips_data: List[tuple[int, float]] = rd.VARS.simulator.skips if rd.VARS.simulator else []
         buy_orders_data = []
         sell_orders_data = []
         sl_orders_data = []
@@ -319,6 +320,9 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
         sl_orders_df = pd.DataFrame(sl_orders_data, columns=["timestamp", "price"])
         sl_orders_df = pd.merge(timestamp_mask, sl_orders_df, on="timestamp", how="left")
 
+        skips_df = pd.DataFrame(skips_data, columns=["timestamp", "price"])
+        skips_df = pd.merge(timestamp_mask, skips_df, on="timestamp", how="left")
+
         if not buy_orders_df["price"].isnull().all():
             axs[ohlcv_charts_count-1].scatter(
                 pd.Series(list(range(len(timestamp_mask)))),
@@ -334,7 +338,11 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
                 pd.Series(list(range(len(timestamp_mask)))),
                 sl_orders_df["price"].reset_index(drop=True), color='red', marker='o'
             )
-
+        if not skips_df["price"].isnull().all():
+            axs[ohlcv_charts_count-1].scatter(
+                pd.Series(list(range(len(timestamp_mask)))),
+                skips_df["price"].reset_index(drop=True), color='purple', marker='o'
+            )
 
         global CURRENT_START_INDEX
         CURRENT_START_INDEX = start_i_

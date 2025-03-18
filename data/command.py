@@ -53,7 +53,7 @@ def command5():
     importlib.reload(tb)
     importlib.reload(ts)
 
-    rd.VARS.simulator.next()
+    rd.VARS.simulator.skip()
     print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
 
 def command6():
