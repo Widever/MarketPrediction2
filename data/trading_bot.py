@@ -172,7 +172,7 @@ class TradingBot:
                     disp_3_change_cum = self.get_cumulative_disp_change(last_n_disp_3_changes)
 
                     # disp_gt_results = [disp_1_change_cum > 300, disp_2_change_cum > 300, disp_3_change_cum > 500]
-                    disp_gt_results = [current_disp_1 > 0.2, current_disp_2 > 0.3, current_disp_3 > 0.4]
+                    disp_gt_results = [current_disp_1 > 0.21, current_disp_2 > 1110.3, current_disp_3 > 1110.4]
                     disp_gt_results = [x for x in disp_gt_results if x]
 
                     # f_disps_n = min(rd.VARS.simulator.current_index, 10)
