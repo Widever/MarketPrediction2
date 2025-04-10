@@ -55,7 +55,7 @@ def show_panel():
     command5_button = ttk.Button(root, text="Skip", command=error_decorator(cmd.command5))
     command5_button.grid(row=4, column=0,sticky="nsew")
 
-    command6_button = ttk.Button(root, text="Command6", command=error_decorator(cmd.command6))
+    command6_button = ttk.Button(root, text="Analyze", command=error_decorator(cmd.command6))
     command6_button.grid(row=5, column=0, sticky="nsew")
 
     command7_button = ttk.Button(root, text="Skip 200", command=error_decorator(cmd.command7))

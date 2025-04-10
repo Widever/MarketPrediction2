@@ -2,8 +2,16 @@ import importlib
 import chart_builder as chb
 import runtime_data as rd
 import trading_bot as tb
+import trading_analyzer as ta
 import trading_simulator as ts
 import datetime as dt
+
+
+def _reload_all():
+    importlib.reload(chb)
+    importlib.reload(tb)
+    importlib.reload(ts)
+    importlib.reload(ta)
 
 
 def update():
@@ -12,10 +20,9 @@ def update():
         currency_data.upper_bound_timestamp = upper_bound_timestamp
         currency_data.update()
 
+
 def command1():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     n = 200
     from_i = max(0, rd.VARS.simulator.current_index - (n-1))
@@ -25,48 +32,38 @@ def command1():
 
 
 def command2():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
     print("Info...")
     rd.VARS.simulator.info()
 
 def command3():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     print("Observe...")
     tb.TradingBot().trade(200, observe=True)
 
 
 def command4():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     print("Perform...")
     tb.TradingBot().perform()
 
 def command5():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     rd.VARS.simulator.skip()
     print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
 
 def command6():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
-    print("Command6")
+    analyzer = ta.TradingAnalyzer()
+    analyzer.print_analyze()
+
 
 def command7():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
     n = 200
     for _ in range(n):
         rd.VARS.simulator.next()
@@ -74,9 +71,7 @@ def command7():
     print(f"Skipped {n}. current_index: {rd.VARS.simulator.current_index}")
 
 def command8():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     if rd.VARS.simulator is None:
         simulator = ts.TradingSimulator()
@@ -91,18 +86,14 @@ def command8():
     print("Reset simulator.")
 
 def command9():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     print("Update...")
     update()
 
 
 def run():
-    importlib.reload(chb)
-    importlib.reload(tb)
-    importlib.reload(ts)
+    _reload_all()
 
     # simulator = ts.TradingSimulator()
     # simulator.balance_stable = 1000
