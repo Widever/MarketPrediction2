@@ -48,7 +48,8 @@ class TradingAnalyzer:
         disp_trend_info = self.check_disp_trend(price_trend_info)
         last_trends_info = self.check_last_trends()
         btc_price_trend_info = self.check_price_trend(verbose=False, symbol="BTCUSDT")
-        self.decision(price_trend_info, disp_trend_info, last_trends_info, btc_price_trend_info)
+        decision = self.decision(price_trend_info, disp_trend_info, last_trends_info, btc_price_trend_info)
+        return decision
 
 
 

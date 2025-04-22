@@ -91,6 +91,23 @@ def command9():
     print("Update...")
     update()
 
+def command10():
+    _reload_all()
+    print("Trade auto!!!")
+    to_index = min(rd.VARS.simulator.current_index + 2000, len(rd.VARS.simulator.ohlcv_df)-1)
+
+    while rd.VARS.simulator.current_index < to_index:
+        tb.TradingBot().trade(200, observe=True)
+
+        analyzer = ta.TradingAnalyzer()
+        decision = analyzer.print_analyze()
+        if decision:
+            print("Perform...")
+            tb.TradingBot().perform()
+        else:
+            print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
+            rd.VARS.simulator.skip()
+
 
 def run():
     _reload_all()
