@@ -263,3 +263,9 @@ class TradingSimulator:
         )
 
         print(msg)
+
+        return {
+            "sell_orders": len(sell_orders_data),
+            "stop_loss_orders": len(sl_orders_data),
+            "balance": self.balance
+        }

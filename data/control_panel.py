@@ -70,8 +70,11 @@ def show_panel():
     command10_button = ttk.Button(root, text="Auto trade", command=error_decorator(cmd.command10))
     command10_button.grid(row=9, column=0, sticky="nsew")
 
+    command11_button = ttk.Button(root, text="Benchmark", command=error_decorator(cmd.command11))
+    command11_button.grid(row=10, column=0, sticky="nsew")
+
     reimport_button = ttk.Button(root, text="Reimport", command=error_decorator(reimport))
-    reimport_button.grid(row=10, column=0, sticky="nsew")
+    reimport_button.grid(row=11, column=0, sticky="nsew")
 
     root.mainloop()
 

@@ -201,7 +201,7 @@ class TradingBot:
                 print(f"Events occurred, index = {rd.VARS.simulator.current_index}:")
                 for e in events:
                     print("\t" + str(e))
-                return
+                return events
 
             if rd.VARS.simulator.current_index == len(rd.VARS.simulator.ohlcv_df) - 1:
                 return

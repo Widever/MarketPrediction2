@@ -221,8 +221,8 @@ class TradingAnalyzer:
         monotone_up = False
         avg_disp_change = 0
         max_disp_change = 0
-        if len(disps_on_trend) > 1:
-            disp_changes = [disps_on_trend[i] - disps_on_trend[i-1] for i in range(1, len(disps_on_trend))]
+        if len(normalized_disps) > 1:
+            disp_changes = [normalized_disps[i] - normalized_disps[i-1] for i in range(1, len(normalized_disps))]
             if all(x > 0 for x in disp_changes):
                 monotone_up = True
 
@@ -257,12 +257,16 @@ class TradingAnalyzer:
 
     def check_last_trends(self, n: int = 5) -> LastTrendsInfo:
         info = []
-        last_start_i = rd.VARS.simulator.current_index + 1
+        last_start_i = rd.VARS.simulator.current_index
         for _ in range(n):
-            trend_info = self.check_price_trend(for_index=last_start_i-1, verbose=False)
+            trend_info = self.check_price_trend(for_index=last_start_i, verbose=False)
             volume = trend_info.trend_value
             info.append((volume, trend_info.trend_len))
+
             last_start_i = trend_info.trend_start_index
+
+            if trend_info.trend_len == 1:
+                last_start_i -= 1
 
         msg = ", ".join([f"{round(v, 4)}/{l}" for v, l in reversed(info)])
         print(f"Last {n} trend volumes: {msg}.")
@@ -288,11 +292,15 @@ class TradingAnalyzer:
             print(f"Decision False: Trend volume is too big - {price_trend_info.trend_value}.")
             return False
 
-        if (prev_trend_vol := abs(last_trends_info.volume_and_len[-2][0])) > 0.037:
+        if (prev_trend_vol := abs(last_trends_info.volume_and_len[1][0])) > 0.037:
             print(f"Decision False: Prev trend volume is too big - {prev_trend_vol}.")
             return False
 
-        if abs(disp_trend_info.max_disp_change) > 0.32:
+        if (sum_trend_vol := abs(last_trends_info.volume_and_len[1][0]) + abs(price_trend_info.trend_value)) > 0.069:
+            print(f"Decision False: Sum trend volume is too big - {sum_trend_vol}.")
+            return False
+
+        if abs(disp_trend_info.max_disp_change) > 0.85:
             print(f"Decision False: Trend max disp change is too big - {disp_trend_info.max_disp_change}.")
             return False
 
@@ -309,8 +317,13 @@ class TradingAnalyzer:
                 return True
 
         if disp_trend_info.is_saddle:
+            print(f"{btc_price_trend_info.trend_kind=}")
+            print(f"{btc_price_trend_info.trend_value=}")
             if price_trend_info.trend_value < -0.025:
                 print("Decision False: Saddle on big down trend.")
+                return False
+            elif price_trend_info.trend_len > 5:
+                print(f"Decision False: Long saddle ({price_trend_info.trend_len}).")
                 return False
             else:
                 if btc_price_trend_info.trend_kind == PriceTrend.UP:
@@ -321,13 +334,16 @@ class TradingAnalyzer:
                 return True
 
         if disp_trend_info.monotone_up:
-            if abs(disp_trend_info.max_disp_change) > 0.3:
+            if abs(disp_trend_info.max_disp_change) > 0.71:
                 print("Decision False: Monotone up on big disp change.")
+                return False
+            elif disp_trend_info.max_disp_change < 0.45:
+                print("Decision False: Monotone up on small disp change.")
                 return False
             elif (max_volume := max(last_trends_info.volume_and_len[-3:], key=lambda x: abs(x[0]))[0]) > 0.025:
                 print(f"Decision False: Monotone up, but big volume trend in last 3: {max_volume=}.")
                 return False
-            elif (max_div_avg := abs(disp_trend_info.max_disp_change / disp_trend_info.avg_disp_change)) < 1.5:
+            elif (max_div_avg := abs(disp_trend_info.max_disp_change) / disp_trend_info.avg_disp_change) < 1.5:
                 print(f"Decision False: Monotone up, but {max_div_avg=} < 1.5.")
                 return False
             else:

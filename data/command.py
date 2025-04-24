@@ -97,7 +97,10 @@ def command10():
     to_index = min(rd.VARS.simulator.current_index + 2000, len(rd.VARS.simulator.ohlcv_df)-1)
 
     while rd.VARS.simulator.current_index < to_index:
-        tb.TradingBot().trade(200, observe=True)
+        events = tb.TradingBot().trade(200, observe=True)
+
+        if events and any(x.trigger == "stop_loss" for x in events):
+            break
 
         analyzer = ta.TradingAnalyzer()
         decision = analyzer.print_analyze()
@@ -107,6 +110,58 @@ def command10():
         else:
             print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
             rd.VARS.simulator.skip()
+
+    print("Trade auto finished.")
+
+
+def command11():
+    _reload_all()
+    print("Trade auto!!!")
+    to_index = min(rd.VARS.simulator.current_index + 10000, len(rd.VARS.simulator.ohlcv_df)-1)
+    interval_results = []
+    prev_info = None
+    last_cutoff = 0
+    while rd.VARS.simulator.current_index < to_index:
+
+        if rd.VARS.simulator.current_index - last_cutoff > 2000:
+            simulator_info: dict = rd.VARS.simulator.info()
+
+            sell_orders = simulator_info.get("sell_orders")
+            sl_orders = simulator_info.get("stop_loss_orders")
+            balance = simulator_info.get("balance")
+
+            if prev_info is not None:
+                prev_sell_orders = prev_info.get("sell_orders")
+                prev_sl_orders = prev_info.get("stop_loss_orders")
+                interval_results.append((sell_orders-prev_sell_orders, sl_orders-prev_sl_orders, balance, rd.VARS.simulator.current_index))
+            else:
+                interval_results.append((sell_orders, sl_orders, balance, rd.VARS.simulator.current_index))
+
+            prev_info = simulator_info
+            last_cutoff = rd.VARS.simulator.current_index
+
+        events = tb.TradingBot().trade(200, observe=True)
+
+        if events and any(x.trigger == "stop_loss" for x in events):
+            continue
+
+        analyzer = ta.TradingAnalyzer()
+        decision = analyzer.print_analyze()
+        if decision:
+            print("Perform...")
+            tb.TradingBot().perform()
+        else:
+            print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
+            rd.VARS.simulator.skip()
+
+    print("Intervals info:")
+    for interval_sell_orders, interval_sl_orders, interval_balance, index in interval_results:
+        print(f"\t- index: {index}, sell: {interval_sell_orders}, sl: {interval_sl_orders}, balance: {interval_balance}.")
+
+    print("TOTAL:")
+    rd.VARS.simulator.info()
+
+    print("Benchmark finished.")
 
 
 def run():
