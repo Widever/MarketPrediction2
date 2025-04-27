@@ -1,4 +1,8 @@
 import importlib
+import time
+from html.parser import endtagfind
+from turtledemo.penrose import start
+
 import chart_builder as chb
 import runtime_data as rd
 import trading_bot as tb
@@ -117,6 +121,7 @@ def command10():
 def command11():
     _reload_all()
     print("Trade auto!!!")
+    start_time = time.time()
     to_index = min(rd.VARS.simulator.current_index + 10000, len(rd.VARS.simulator.ohlcv_df)-1)
     interval_results = []
     prev_info = None
@@ -163,6 +168,8 @@ def command11():
 
     print("Benchmark finished.")
 
+    end_time = time.time()
+    print(f"Elapsed: {(end_time-start_time)/60}min.")
 
 def run():
     _reload_all()
