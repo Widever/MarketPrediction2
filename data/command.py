@@ -1,5 +1,6 @@
 import importlib
 import time
+from collections import defaultdict
 from html.parser import endtagfind
 from turtledemo.penrose import start
 
@@ -107,7 +108,7 @@ def command10():
             break
 
         analyzer = ta.TradingAnalyzer()
-        decision = analyzer.print_analyze()
+        decision, reason = analyzer.print_analyze()
         if decision:
             print("Perform...")
             tb.TradingBot().perform()
@@ -124,8 +125,14 @@ def command11():
     start_time = time.time()
     to_index = min(rd.VARS.simulator.current_index + 10000, len(rd.VARS.simulator.ohlcv_df)-1)
     interval_results = []
+
+    true_reason_dict = defaultdict(int)
+    false_reason_dict = defaultdict(int)
+    sl_reason_dict = defaultdict(int)
+
     prev_info = None
     last_cutoff = 0
+    last_true_decision_reason = None
     while rd.VARS.simulator.current_index < to_index:
 
         if rd.VARS.simulator.current_index - last_cutoff > 2000:
@@ -148,14 +155,20 @@ def command11():
         events = tb.TradingBot().trade(200, observe=True)
 
         if events and any(x.trigger == "stop_loss" for x in events):
+            assert last_true_decision_reason is not None
+            sl_reason_dict[last_true_decision_reason] += 1
             continue
 
         analyzer = ta.TradingAnalyzer()
-        decision = analyzer.print_analyze()
+        decision, reason = analyzer.print_analyze()
+
         if decision:
+            true_reason_dict[reason] += 1
+            last_true_decision_reason = reason
             print("Perform...")
             tb.TradingBot().perform()
         else:
+            false_reason_dict[reason] += 1
             print(f"Skipped 1. current_index: {rd.VARS.simulator.current_index}")
             rd.VARS.simulator.skip()
 
@@ -165,6 +178,18 @@ def command11():
 
     print("TOTAL:")
     rd.VARS.simulator.info()
+
+    print("True reasons stat:")
+    for reason_, count_ in sorted(true_reason_dict.items(), key=lambda x: x[1], reverse=True):
+        print(f"\t{reason_}: {count_}")
+
+    print("False reasons stat:")
+    for reason_, count_ in sorted(false_reason_dict.items(), key=lambda x: x[1], reverse=True):
+        print(f"\t{reason_}: {count_}")
+
+    print("Stop loss reasons stat:")
+    for reason_, count_ in sorted(sl_reason_dict.items(), key=lambda x: x[1], reverse=True):
+        print(f"\t{reason_}: {count_}")
 
     print("Benchmark finished.")
 
