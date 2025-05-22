@@ -17,6 +17,9 @@ class PriceTrendInfo:
     trend_value: float
     trend_len: int
     trend_start_index: int
+    max_ampl: float
+    avg_ampl: float
+    trend_ohlcva: list[tuple[int, float, float, float, float, float]]
 
 @dataclass
 class DispTrendInfo:
@@ -30,17 +33,20 @@ class DispTrendInfo:
     monotone_up: bool
     avg_disp_change: float
     max_disp_change: float
+    avg_disp_greater_limit: float
+    max_disp: float
     is_lightning: bool
     is_saddle: bool
 
 @dataclass
 class LastTrendsInfo:
     volume_and_len: list[tuple[float, int]]
+    sum_volume_of_last_3: float
 
 
 class TradingAnalyzer:
 
-    def print_analyze(self):
+    def analyze(self):
         print()
         print("Analysis:")
         price_trend_info = self.check_price_trend()
@@ -49,9 +55,20 @@ class TradingAnalyzer:
         last_trends_info = self.check_last_trends()
         btc_price_trend_info = self.check_price_trend(verbose=False, symbol="BTCUSDT")
         decision, reason = self.decision(price_trend_info, disp_trend_info, last_trends_info, btc_price_trend_info)
+        print(f"{decision=}, {reason=}")
         return decision, reason
 
+    def check_trigger(self):
+        lower_disp_1 = dsp.get_disp_1_lower()
+        last_disps = [
+            float(lower_disp_1["disp"].reset_index(drop=True).at[i]) for i in
+            range(rd.VARS.simulator.current_index - 10, rd.VARS.simulator.current_index + 1)
+        ]
 
+        if last_disps[-1] > 0.21:
+            return True, "big_disp"
+        else:
+            return False, None
 
     def check_price_trend(self, for_index: int = None, verbose: bool = True, symbol: str = None) -> PriceTrendInfo:
 
@@ -142,16 +159,38 @@ class TradingAnalyzer:
         else:
             raise RuntimeError("Expect all cases covered.")
 
+
+        trend_start_index = for_index - trend_len + 1
+        trend_ohlcva = []
+
+        for trend_i in range(trend_start_index, trend_start_index+trend_len+1):
+            i_open_price = int(ohlcv_df["open"].at[trend_i])
+            i_high_price = float(ohlcv_df["high"].at[trend_i])
+            i_low_price = float(ohlcv_df["low"].at[trend_i])
+            i_close_price = float(ohlcv_df["close"].at[trend_i])
+            i_volume = float(ohlcv_df["volume"].at[trend_i])
+            i_ampl = float(i_high_price / i_low_price - 1)
+            trend_ohlcva.append((i_open_price, i_high_price, i_low_price, i_close_price, i_volume, i_ampl))
+
+        ampls = [x[5] for x in trend_ohlcva]
+        max_ampl = max(ampls)
+        avg_ampl = mean(ampls)
+
         if verbose:
             print(f"Trend: {trend.name}.")
             print(f"Trend value: {trend_value}.")
             print(f"Trend len: {trend_len}.")
+            print(f"Max ampl: {max_ampl}.")
+            print(f"Avg ampl: {avg_ampl}.")
 
         return PriceTrendInfo(
             trend_kind=trend,
             trend_value=trend_value,
             trend_len=trend_len,
-            trend_start_index=for_index - trend_len + 1
+            trend_start_index=for_index - trend_len + 1,
+            max_ampl=max_ampl,
+            avg_ampl=avg_ampl,
+            trend_ohlcva=trend_ohlcva
         )
 
     def check_disp_trend(self, price_trend_info: PriceTrendInfo) -> DispTrendInfo:
@@ -239,6 +278,13 @@ class TradingAnalyzer:
         print(f"{is_lightning=}")
         print(f"{is_saddle=}")
 
+        disps_greater_limit = [x for x in disps_on_trend if x > 0.11]
+        avg_disp_greater_limit = mean(disps_greater_limit) if disps_greater_limit else 0
+        max_disp = max(disps_on_trend)
+
+        print(f"{max_disp=}")
+        print(f"{avg_disp_greater_limit=}")
+
         return DispTrendInfo(
             disps_on_trend=disps_on_trend,
             trend_start_high_disp=trend_start_high_disp,
@@ -250,6 +296,8 @@ class TradingAnalyzer:
             monotone_up=monotone_up,
             avg_disp_change=avg_disp_change,
             max_disp_change=max_disp_change,
+            avg_disp_greater_limit=avg_disp_greater_limit,
+            max_disp=max_disp,
             is_lightning=is_lightning,
             is_saddle=is_saddle
         )
@@ -268,12 +316,17 @@ class TradingAnalyzer:
             if trend_info.trend_len == 1:
                 last_start_i -= 1
 
-        msg = ", ".join([f"{round(v, 4)}/{l}" for v, l in reversed(info)])
+        info = list(reversed(info))
+        msg = ", ".join([f"{round(v, 4)}/{l}" for v, l in info])
         print(f"Last {n} trend volumes: {msg}.")
 
+        sum_volume_of_last_3 = sum(abs(x[0]) for x in info[-3:])
+        print(f"Last 3 trends volume sum: {sum_volume_of_last_3}")
         return LastTrendsInfo(
-            volume_and_len=info
+            volume_and_len=info,
+            sum_volume_of_last_3=sum_volume_of_last_3
         )
+
 
     def decision(
         self,
@@ -282,6 +335,7 @@ class TradingAnalyzer:
         last_trends_info: LastTrendsInfo,
         btc_price_trend_info: PriceTrendInfo
     ):
+
         print(f"{btc_price_trend_info.trend_kind=}")
         print(f"{btc_price_trend_info.trend_value=}")
 
@@ -289,12 +343,47 @@ class TradingAnalyzer:
             print(f"Decision False: Trend is {price_trend_info.trend_kind.name}.")
             return False, "trend_not_down"
 
+        if price_trend_info.trend_len > 6:
+            print(f"Decision False. trend len > 6.")
+            return False, "trend_too_long"
+
+        if len(disp_trend_info.disps_on_trend) <= 1:
+            print(f"Decision False. Trend len = {len(disp_trend_info.disps_on_trend)}.")
+            return False, "trend_len_too_short"
+
+        # if last_trends_info.sum_volume_of_last_3 > 0.15:
+        #     print(f"Decision False. {last_trends_info.sum_volume_of_last_3=} > 0.15.")
+        #     return False, "last_trends_sum_big"
+
+        if abs(disp_trend_info.max_disp_change) == 0:
+            print(f"Decision False. max disp change is 0.")
+            return False, "max_disp_change_is_0"
+
+        # if disp_trend_info.max_disp > 0.97:
+        #     print(f"Decision False. max disp > 0.97.")
+        #     return False, "max_disp_is_big"
+        #
+        # if (current_div_max := disp_trend_info.disps_on_trend[-1] / disp_trend_info.max_disp) < 0.5:
+        #     print(f"Decision False: {current_div_max=} < 0.5.")
+        #     return False, "current_div_max_bad"
+        #
+
+        if price_trend_info.max_ampl < 0.008:
+            print(f"Decision False: {price_trend_info.max_ampl=} < 0.008.")
+            return False, "max_ampl_small"
+
+        if 0 < (avg_div_max := disp_trend_info.avg_disp_greater_limit / disp_trend_info.max_disp) < 0.7:
+            print(f"Decision True: {avg_div_max=} < 0.7.")
+            return True, "avg_div_max_good"
+
+        return False, "exit"
+
         if (min_disp := min(disp_trend_info.disps_on_trend)) > 0.32:
             print(f"Decision False: Min disp is too big: {min_disp}.")
             return False, "min_disp_big"
 
 
-        if abs(price_trend_info.trend_value) > 0.032:
+        if abs(price_trend_info.trend_value) > 0.037:
             print(f"Decision False: Trend volume is too big - {price_trend_info.trend_value}.")
             return False, "trend_volume_big"
 
@@ -366,7 +455,7 @@ class TradingAnalyzer:
             elif (max_volume := abs(max(last_trends_info.volume_and_len[:4], key=lambda x: abs(x[0]))[0])) > 0.025:
                 print(f"Decision False: Monotone up, but big volume trend in last 3: {max_volume=}.")
                 return False, "monotone_up_but_volume_in_last_n_big"
-            elif (avg_div_max :=  disp_trend_info.avg_disp_change / abs(disp_trend_info.max_disp_change)) > 0.9:
+            elif (avg_div_max := disp_trend_info.avg_disp_change / abs(disp_trend_info.max_disp_change)) > 0.9:
                 print(f"Decision False: Monotone up, but {avg_div_max=} > 0.9.")
                 return False, "monotone_up_but_avg_div_max_is_close"
             else:

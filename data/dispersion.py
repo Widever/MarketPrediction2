@@ -59,9 +59,9 @@ def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.D
 def _normalize_peaks(disp_df: pd.DataFrame):
     disps = sorted(disp_df["disp"])
 
-    norm_index = int(len(disps) * 0.97)
-    tear_1_index = int(len(disps) * 0.98)
-    tear_2_index = int(len(disps) * 0.98)
+    norm_index = int(len(disps) * 0.99)
+    tear_1_index = int(len(disps) * 0.99)
+    tear_2_index = int(len(disps) * 0.99)
     tear_3_index = int(len(disps) * 0.99)
 
     norm_value = disps[norm_index]
@@ -73,13 +73,13 @@ def _normalize_peaks(disp_df: pd.DataFrame):
 
     def normalize_func(x):
         if x > tear_3_value:
-            return norm_value * 2
-        elif x > tear_2_value:
-            return norm_value * 1.5
-        elif x > tear_1_value:
-            return norm_value * 1.3
-        elif x > norm_value:
-            return norm_value * 1.2
+            return norm_value * 1.1
+        # elif x > tear_2_value:
+        #     return norm_value * 1.5
+        # elif x > tear_1_value:
+        #     return norm_value * 1.3
+        # elif x > norm_value:
+        #     return norm_value * 1.2
         else:
             return x
 
@@ -105,9 +105,9 @@ def _get_upper_disp_for_set(set_: List[str]) -> pd.DataFrame:
 
 set_1 = [
     "BTCUSDT",
-    # "ETHUSDT",
+    "ETHUSDT",
     "ADAUSDT",
-    # "BNBUSDT",
+    "BNBUSDT",
     # "DOGEUSDT",
     # "XRPUSDT",
     # "AVAXUSDT",

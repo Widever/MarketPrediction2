@@ -24,21 +24,13 @@ def show_panel():
 
     # Create the main Tkinter window
     root = tk.Tk()
-    root.geometry("300x400")
+    root.geometry("300x600")
     root.protocol("WM_DELETE_WINDOW", _quit)
     root.title("Control panel")
 
     root.columnconfigure(0, weight=1)
-    root.rowconfigure(0, weight=1)  # Рядки розтягуються по вертикалі
-    root.rowconfigure(1, weight=1)
-    root.rowconfigure(2, weight=1)
-    root.rowconfigure(3, weight=1)
-    root.rowconfigure(4, weight=1)
-    root.rowconfigure(5, weight=1)
-    root.rowconfigure(6, weight=1)
-    root.rowconfigure(7, weight=1)
-    root.rowconfigure(8, weight=1)
-    root.rowconfigure(9, weight=1)
+    for n_row in range(18):
+        root.rowconfigure(n_row, weight=1)  # Рядки розтягуються по вертикалі
 
     command1_button = ttk.Button(root, text="Chart for current index", command=error_decorator(cmd.command1))
     command1_button.grid(row=0, column=0, sticky="nsew")
@@ -67,14 +59,35 @@ def show_panel():
     command9_button = ttk.Button(root, text="Update data", command=error_decorator(cmd.command9))
     command9_button.grid(row=8, column=0, sticky="nsew")
 
-    command10_button = ttk.Button(root, text="Auto trade", command=error_decorator(cmd.command10))
+    command10_button = ttk.Button(root, text="Benchmark small", command=error_decorator(cmd.command10))
     command10_button.grid(row=9, column=0, sticky="nsew")
 
-    command11_button = ttk.Button(root, text="Benchmark", command=error_decorator(cmd.command11))
+    command11_button = ttk.Button(root, text="Benchmark big", command=error_decorator(cmd.command11))
     command11_button.grid(row=10, column=0, sticky="nsew")
 
+    command12_button = ttk.Button(root, text="Go to next sl", command=error_decorator(cmd.command12))
+    command12_button.grid(row=11, column=0, sticky="nsew")
+
+    command13_button = ttk.Button(root, text="Go to prev sl", command=error_decorator(cmd.command13))
+    command13_button.grid(row=12, column=0, sticky="nsew")
+
+    command14_button = ttk.Button(root, text="Go to next perform", command=error_decorator(cmd.command14))
+    command14_button.grid(row=13, column=0, sticky="nsew")
+
+    command15_button = ttk.Button(root, text="Go to prev perform", command=error_decorator(cmd.command15))
+    command15_button.grid(row=14, column=0, sticky="nsew")
+
+    command16_button = ttk.Button(root, text="Go to start", command=error_decorator(cmd.command16))
+    command16_button.grid(row=15, column=0, sticky="nsew")
+
+    command17_button = ttk.Button(root, text="Jump n", command=error_decorator(cmd.command17))
+    command17_button.grid(row=16, column=0, sticky="nsew")
+
+    command18_button = ttk.Button(root, text="Event stats", command=error_decorator(cmd.command18))
+    command18_button.grid(row=17, column=0, sticky="nsew")
+
     reimport_button = ttk.Button(root, text="Reimport", command=error_decorator(reimport))
-    reimport_button.grid(row=11, column=0, sticky="nsew")
+    reimport_button.grid(row=18, column=0, sticky="nsew")
 
     root.mainloop()
 

@@ -93,7 +93,7 @@ def _normalize_range_monotone_sums(monotone_sums: list):
 
     res = []
     for x in monotone_sums:
-        res.append(tb.TradingBot().normalize_monotone_sum(x))
+        res.append(x)
 
     return res
 
@@ -361,12 +361,12 @@ def run(start_i: int = 0, sample_len: int = 200, end_limit: int | None = None):
                 mask_index += 1
                 mask_timestamp = timestamp_mask["timestamp"].iat[mask_index]
 
-                monotone_seq = tb.TradingBot().get_last_monotone_by_lower(i)
+                # monotone_seq = tb.TradingBot().get_last_monotone_by_lower(i)
+                #
+                # range_ampl = tb.TradingBot().get_range_ampl(i, len(monotone_seq))
+                monotone_ampls.append(0.1)
 
-                range_ampl = tb.TradingBot().get_range_ampl(i, len(monotone_seq))
-                monotone_ampls.append(range_ampl)
-
-                f_disps.append(tb.TradingBot().get_f_disp(disp_1, disp_2, disp_3, i))
+                f_disps.append(0.1)
 
         if len(f_disps) < len(timestamp_mask):
             f_disps = f_disps + [f_disps[-1]] * (len(timestamp_mask) - len(f_disps))
