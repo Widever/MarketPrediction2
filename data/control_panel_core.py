@@ -304,7 +304,9 @@ class ControlPanelCore:
 
         print("True decision stat:")
         for reason_, count_ in sorted(true_decision_stat.items(), key=lambda x: x[1], reverse=True):
-            print(f"\t{reason_}: {count_}")
+            sl_count = sl_decision_stat[reason_]
+            sell_div_sl_stat = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
+            print(f"\t{reason_}: {count_} | sell/sl = {sell_div_sl_stat}")
 
         print("False decision stat:")
         for reason_, count_ in sorted(false_decision_stat.items(), key=lambda x: x[1], reverse=True):

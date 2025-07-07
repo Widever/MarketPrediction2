@@ -42,6 +42,7 @@ class DispTrendInfo:
 class LastTrendsInfo:
     volume_and_len: list[tuple[float, int]]
     sum_volume_of_last_3: float
+    sum_last_2: float
 
 
 class TradingAnalyzer:
@@ -321,10 +322,12 @@ class TradingAnalyzer:
         print(f"Last {n} trend volumes: {msg}.")
 
         sum_volume_of_last_3 = sum(abs(x[0]) for x in info[-3:])
+        sum_last_2 = abs(sum(x[0] for x in info[-2:]))
         print(f"Last 3 trends volume sum: {sum_volume_of_last_3}")
         return LastTrendsInfo(
             volume_and_len=info,
-            sum_volume_of_last_3=sum_volume_of_last_3
+            sum_volume_of_last_3=sum_volume_of_last_3,
+            sum_last_2=sum_last_2
         )
 
 
@@ -336,45 +339,48 @@ class TradingAnalyzer:
         btc_price_trend_info: PriceTrendInfo
     ):
 
-        print(f"{btc_price_trend_info.trend_kind=}")
-        print(f"{btc_price_trend_info.trend_value=}")
+        last_trends_option = False, "exit1"
+        if last_trends_info.sum_volume_of_last_3 > 0.05:
+            # return True, "last_trends_sum_gt05"  # sell/sl = 1.6
+            last_trends_option = False, "last_trends_sum_gt05"
+        elif last_trends_info.sum_volume_of_last_3 > 0.03:
+            # return True, "last_trends_sum_gt03"  # sell/sl = 2.1
+            last_trends_option = True, "last_trends_sum_gt03"
+        else:
+            # return True, "last_trends_sum_lt03"
+            pass
 
-        if price_trend_info.trend_kind != PriceTrend.DOWN:
-            print(f"Decision False: Trend is {price_trend_info.trend_kind.name}.")
-            return False, "trend_not_down"
+        disp_option = False, "exit2"
+        if disp_trend_info.monotone_up:
+            # return True, "disp_monotone_up"  # sell/sl = 1.5
+            disp_option = False, "disp_monotone_up"
+        else:
+            # return True, "disp_not_monotone_up"  # sell/sl = 1.9
+            disp_option = True, "disp_not_monotone_up"
 
-        if price_trend_info.trend_len > 6:
-            print(f"Decision False. trend len > 6.")
-            return False, "trend_too_long"
+        btc_match_option = False, "exit3"
+        if btc_price_trend_info.trend_kind == PriceTrend.UP and price_trend_info.trend_kind == PriceTrend.UP:
+            # return True, "trend_match_up"  # sell/sl = 1.3
+            btc_match_option = False, "trend_match_up"
+        elif btc_price_trend_info.trend_kind == PriceTrend.DOWN and price_trend_info.trend_kind == PriceTrend.DOWN:
+            # return True, "trend_match_down"  # sell/sl = 1.7
+            btc_match_option = True, "trend_match_down"
+        elif btc_price_trend_info.trend_kind == PriceTrend.FLAT and price_trend_info.trend_kind == PriceTrend.FLAT:
+            # return True, "trend_match_flat"  # sell/sl = 0
+            btc_match_option = False, "trend_match_flat"
+        elif btc_price_trend_info.trend_kind == PriceTrend.FLAT and price_trend_info.trend_kind != PriceTrend.FLAT:
+            # return True, "trend_not_match_flat"  # sell/sl = 1.6
+            btc_match_option = True, "trend_not_match_flat"
+        else:
+            # return True, "trend_not_match"  # sell/sl = 1.7
+            btc_match_option = True, "trend_not_match"
 
-        if len(disp_trend_info.disps_on_trend) <= 1:
-            print(f"Decision False. Trend len = {len(disp_trend_info.disps_on_trend)}.")
-            return False, "trend_len_too_short"
+        combined_option = f"{last_trends_option[1]=};{disp_option[1]=};{btc_match_option[1]=}"
+        all_options = all(x[0] for x in (last_trends_option, disp_option))
+        # any_options = any(x[0] for x in (last_trends_option, disp_option, btc_match_option))
 
-        # if last_trends_info.sum_volume_of_last_3 > 0.15:
-        #     print(f"Decision False. {last_trends_info.sum_volume_of_last_3=} > 0.15.")
-        #     return False, "last_trends_sum_big"
-
-        if abs(disp_trend_info.max_disp_change) == 0:
-            print(f"Decision False. max disp change is 0.")
-            return False, "max_disp_change_is_0"
-
-        # if disp_trend_info.max_disp > 0.97:
-        #     print(f"Decision False. max disp > 0.97.")
-        #     return False, "max_disp_is_big"
-        #
-        # if (current_div_max := disp_trend_info.disps_on_trend[-1] / disp_trend_info.max_disp) < 0.5:
-        #     print(f"Decision False: {current_div_max=} < 0.5.")
-        #     return False, "current_div_max_bad"
-        #
-
-        if price_trend_info.max_ampl < 0.008:
-            print(f"Decision False: {price_trend_info.max_ampl=} < 0.008.")
-            return False, "max_ampl_small"
-
-        if 0 < (avg_div_max := disp_trend_info.avg_disp_greater_limit / disp_trend_info.max_disp) < 0.7:
-            print(f"Decision True: {avg_div_max=} < 0.7.")
-            return True, "avg_div_max_good"
+        if all_options:
+            return True, combined_option
 
         return False, "exit"
 
