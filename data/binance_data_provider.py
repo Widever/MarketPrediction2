@@ -10,7 +10,7 @@ class BinanceDataProvider:
         self.client = Client(api_key, api_secret)
 
     def get_currency_ohlc_data(self, symbol: str, from_timestamp: int, to_timestamp: int | None) -> pd.DataFrame:
-        interval = Client.KLINE_INTERVAL_15MINUTE
+        interval = Client.KLINE_INTERVAL_5MINUTE
         klines = self.client.get_historical_klines(
             symbol, interval, from_timestamp, to_timestamp
         )

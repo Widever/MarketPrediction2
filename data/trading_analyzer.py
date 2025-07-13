@@ -19,6 +19,7 @@ class PriceTrendInfo:
     trend_start_index: int
     max_ampl: float
     avg_ampl: float
+    avg_ampl_gt_limit: float
     trend_ohlcva: list[tuple[int, float, float, float, float, float]]
 
 @dataclass
@@ -66,7 +67,7 @@ class TradingAnalyzer:
             range(rd.VARS.simulator.current_index - 10, rd.VARS.simulator.current_index + 1)
         ]
 
-        if last_disps[-1] > 0.21:
+        if last_disps[-1] > 0.6:
             return True, "big_disp"
         else:
             return False, None
@@ -177,6 +178,9 @@ class TradingAnalyzer:
         max_ampl = max(ampls)
         avg_ampl = mean(ampls)
 
+        ampl_gt_limit = [x for x in ampls if x > 0.003]
+        avg_ampl_gt_limit = mean(ampl_gt_limit) if ampl_gt_limit else 0.0
+
         if verbose:
             print(f"Trend: {trend.name}.")
             print(f"Trend value: {trend_value}.")
@@ -191,6 +195,7 @@ class TradingAnalyzer:
             trend_start_index=for_index - trend_len + 1,
             max_ampl=max_ampl,
             avg_ampl=avg_ampl,
+            avg_ampl_gt_limit=avg_ampl_gt_limit,
             trend_ohlcva=trend_ohlcva
         )
 
@@ -338,135 +343,13 @@ class TradingAnalyzer:
         last_trends_info: LastTrendsInfo,
         btc_price_trend_info: PriceTrendInfo
     ):
-
-        last_trends_option = False, "exit1"
-        if last_trends_info.sum_volume_of_last_3 > 0.05:
-            # return True, "last_trends_sum_gt05"  # sell/sl = 1.6
-            last_trends_option = False, "last_trends_sum_gt05"
-        elif last_trends_info.sum_volume_of_last_3 > 0.03:
-            # return True, "last_trends_sum_gt03"  # sell/sl = 2.1
-            last_trends_option = True, "last_trends_sum_gt03"
+        if price_trend_info.avg_ampl_gt_limit > 0.02:
+            return True, "avg_ampl_gt_limit>0.02"
+        if price_trend_info.avg_ampl_gt_limit > 0.013:
+            return True, "avg_ampl_gt_limit>0.013"
+        elif price_trend_info.avg_ampl_gt_limit > 0.007:
+            return True, "avg_ampl_gt_limit>0.007"
         else:
-            # return True, "last_trends_sum_lt03"
-            pass
+            return False, "avg_ampl_gt_limit<"
 
-        disp_option = False, "exit2"
-        if disp_trend_info.monotone_up:
-            # return True, "disp_monotone_up"  # sell/sl = 1.5
-            disp_option = False, "disp_monotone_up"
-        else:
-            # return True, "disp_not_monotone_up"  # sell/sl = 1.9
-            disp_option = True, "disp_not_monotone_up"
-
-        btc_match_option = False, "exit3"
-        if btc_price_trend_info.trend_kind == PriceTrend.UP and price_trend_info.trend_kind == PriceTrend.UP:
-            # return True, "trend_match_up"  # sell/sl = 1.3
-            btc_match_option = False, "trend_match_up"
-        elif btc_price_trend_info.trend_kind == PriceTrend.DOWN and price_trend_info.trend_kind == PriceTrend.DOWN:
-            # return True, "trend_match_down"  # sell/sl = 1.7
-            btc_match_option = True, "trend_match_down"
-        elif btc_price_trend_info.trend_kind == PriceTrend.FLAT and price_trend_info.trend_kind == PriceTrend.FLAT:
-            # return True, "trend_match_flat"  # sell/sl = 0
-            btc_match_option = False, "trend_match_flat"
-        elif btc_price_trend_info.trend_kind == PriceTrend.FLAT and price_trend_info.trend_kind != PriceTrend.FLAT:
-            # return True, "trend_not_match_flat"  # sell/sl = 1.6
-            btc_match_option = True, "trend_not_match_flat"
-        else:
-            # return True, "trend_not_match"  # sell/sl = 1.7
-            btc_match_option = True, "trend_not_match"
-
-        combined_option = f"{last_trends_option[1]=};{disp_option[1]=};{btc_match_option[1]=}"
-        all_options = all(x[0] for x in (last_trends_option, disp_option))
-        # any_options = any(x[0] for x in (last_trends_option, disp_option, btc_match_option))
-
-        if all_options:
-            return True, combined_option
-
-        return False, "exit"
-
-        if (min_disp := min(disp_trend_info.disps_on_trend)) > 0.32:
-            print(f"Decision False: Min disp is too big: {min_disp}.")
-            return False, "min_disp_big"
-
-
-        if abs(price_trend_info.trend_value) > 0.037:
-            print(f"Decision False: Trend volume is too big - {price_trend_info.trend_value}.")
-            return False, "trend_volume_big"
-
-        if (prev_trend_vol := abs(last_trends_info.volume_and_len[1][0])) > 0.037:
-            print(f"Decision False: Prev trend volume is too big - {prev_trend_vol}.")
-            return False, "prev_trend_volume_big"
-
-        if (sum_trend_vol := abs(last_trends_info.volume_and_len[1][0]) + abs(price_trend_info.trend_value)) > 0.069:
-            print(f"Decision False: Sum trend volume is too big - {sum_trend_vol}.")
-            return False, "sum_trend_volume_big"
-
-        if abs(disp_trend_info.max_disp_change) > 0.65:
-            print(f"Decision False: Trend max disp change is too big - {disp_trend_info.max_disp_change}.")
-            return False, "max_disp_change_big"
-
-        if disp_trend_info.is_lightning:
-            if price_trend_info.trend_value > -0.011:
-                print("Decision False: Lightning, but trend is weak.")
-                return False, "lightning_but_trend_weak"
-            elif price_trend_info.trend_len > 3:
-                print(f"Decision False: Long lightning ({price_trend_info.trend_len}).")
-                return False, "lightning_but_long"
-            elif disp_trend_info.monotone_up:
-                print(f"Decision False: Lightning and monotone up at the same time.")
-                return False, "lightning_but_monotone_up"
-            else:
-                # if btc_price_trend_info.trend_kind == PriceTrend.UP:
-                #     print(f"Decision False: Lightning, but BTC trend is {btc_price_trend_info.trend_kind.name}.")
-                #     return False
-
-                print(f"Decision True: Good lightning.")
-                return True, "good_lightning"
-
-        if disp_trend_info.is_saddle:
-            if price_trend_info.trend_value < -0.025:
-                print("Decision False: Saddle on big down trend.")
-                return False, "saddle_but_volume_big"
-            elif price_trend_info.trend_len > 5:
-                print(f"Decision False: Long saddle ({price_trend_info.trend_len}).")
-                return False, "saddle_but_long"
-            else:
-                # if btc_price_trend_info.trend_kind == PriceTrend.UP:
-                #     print(f"Decision False: Saddle, but BTC trend is {btc_price_trend_info.trend_kind.name}.")
-                #     return False
-
-                if (avg_div_max :=  disp_trend_info.avg_disp_change / abs(disp_trend_info.max_disp_change)) > 0.6:
-                    print(f"Decision False: Saddle, but {avg_div_max=} > 0.6.")
-                    return False, "saddle_but_avg_div_max_is_close"
-
-                print("Decision True: Good saddle.")
-                return True, "good_saddle"
-
-        if disp_trend_info.monotone_up:
-            assert len(disp_trend_info.disps_on_trend) > 1
-
-            if disp_trend_info.disps_on_trend[-2] / disp_trend_info.disps_on_trend[-1] > 0.85:
-                print("Decision False: Monotone up, but last 2 disps are too close.")
-                return False, "monotone_up_but_last_2_close"
-
-            if abs(disp_trend_info.max_disp_change) > 0.6:
-                print("Decision False: Monotone up on big disp change.")
-                return False, "monotone_up_but_big_disp_change"
-            # if max(disp_trend_info.disps_on_trend) > 0.59:
-            #     print("Decision False: Monotone up on big disp.")
-            #     return False
-            elif disp_trend_info.max_disp_change < 0.2:
-                print("Decision False: Monotone up on small disp change.")
-                return False, "monotone_up_but_small_disp_change"
-            elif (max_volume := abs(max(last_trends_info.volume_and_len[:4], key=lambda x: abs(x[0]))[0])) > 0.025:
-                print(f"Decision False: Monotone up, but big volume trend in last 3: {max_volume=}.")
-                return False, "monotone_up_but_volume_in_last_n_big"
-            elif (avg_div_max := disp_trend_info.avg_disp_change / abs(disp_trend_info.max_disp_change)) > 0.9:
-                print(f"Decision False: Monotone up, but {avg_div_max=} > 0.9.")
-                return False, "monotone_up_but_avg_div_max_is_close"
-            else:
-                print(f"Decision True: Good monotone up.")
-                return True, "good_monotone_up"
-
-        print("Decision False. No triggers.")
-        return False, "no_triggers"
+        return True, "exit"
