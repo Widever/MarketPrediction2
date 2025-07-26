@@ -343,8 +343,8 @@ class TradingAnalyzer:
         last_trends_info: LastTrendsInfo,
         btc_price_trend_info: PriceTrendInfo
     ):
-        if price_trend_info.avg_ampl_gt_limit > 0.02:
-            return True, "avg_ampl_gt_limit>0.02"
+        if price_trend_info.avg_ampl_gt_limit > 0.03:
+            return False, "avg_ampl_gt_limit>0.03"
         if price_trend_info.avg_ampl_gt_limit > 0.013:
             return True, "avg_ampl_gt_limit>0.013"
         elif price_trend_info.avg_ampl_gt_limit > 0.007:

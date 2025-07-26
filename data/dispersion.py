@@ -5,6 +5,11 @@ import runtime_data as rd
 # from data.runtime_data import CURRENCY_DATAS
 from data.validation import validate_disp_df
 
+_DISP_CACHE = {}
+
+def reset_disp_cache():
+    global _DISP_CACHE
+    _DISP_CACHE = {}
 
 def _get_basic_disp_for_set(set_: List[str], from_col: str, to_col: str) -> pd.DataFrame:
 
@@ -115,6 +120,12 @@ set_1 = [
 ]
 
 def get_disp_1_lower() -> pd.DataFrame:
+
+    name_in_cache = "disp_1_lower"
+
+    if (cached_disp := _DISP_CACHE.get(name_in_cache)) is not None:
+        return cached_disp
+
     disp = _get_lower_disp_for_set(set_1)
 
     validate_disp_df(disp)
@@ -122,6 +133,7 @@ def get_disp_1_lower() -> pd.DataFrame:
     if len(disp) != len(rd.CURRENCY_DATAS.get(set_1[0]).ohlcv_df):
         raise RuntimeError("Disp len is invalid.")
 
+    _DISP_CACHE[name_in_cache] = disp
     return disp
 
 

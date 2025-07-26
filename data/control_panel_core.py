@@ -2,6 +2,7 @@ import importlib
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from dispersion import reset_disp_cache
 
 import runtime_data as rd
 import trading_analyzer as ta
@@ -205,6 +206,7 @@ class ControlPanelCore:
         global all_events
         all_events = defaultdict(list)
         rd.VARS.simulator.reset()
+        reset_disp_cache()
         print(">> reset done.")
 
     @classmethod
