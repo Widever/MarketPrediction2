@@ -343,13 +343,28 @@ class TradingAnalyzer:
         last_trends_info: LastTrendsInfo,
         btc_price_trend_info: PriceTrendInfo
     ):
-        if price_trend_info.avg_ampl_gt_limit > 0.03:
-            return False, "avg_ampl_gt_limit>0.03"
-        if price_trend_info.avg_ampl_gt_limit > 0.013:
-            return True, "avg_ampl_gt_limit>0.013"
-        elif price_trend_info.avg_ampl_gt_limit > 0.007:
-            return True, "avg_ampl_gt_limit>0.007"
+        last_sl = rd.VARS.bot.sl_history[-1] if rd.VARS.bot.sl_history else None
+        dist_to_last_sl = 10000000000000000 if last_sl is None else rd.VARS.simulator.current_index - last_sl
+
+        if dist_to_last_sl > 60:
+            dist_to_last_sl_str = "very_far"
+        elif dist_to_last_sl > 10:
+            dist_to_last_sl_str = "far"
+        elif dist_to_last_sl > 3:
+            dist_to_last_sl_str = "close"
         else:
-            return False, "avg_ampl_gt_limit<"
+            dist_to_last_sl_str = "very_close"
+
+        add_tag = f"_to_sl_{dist_to_last_sl_str}"
+        if price_trend_info.avg_ampl_gt_limit > 0.03:
+            return False, "avg_ampl_gt_limit>0.03" + add_tag
+        elif price_trend_info.avg_ampl_gt_limit > 0.013:
+            dec = dist_to_last_sl_str in ("very_close",)
+            return dec, "avg_ampl_gt_limit>0.013" + add_tag
+        elif price_trend_info.avg_ampl_gt_limit > 0.007:
+            dec = dist_to_last_sl_str in ("far", "very_close", "very_far")
+            return dec, "avg_ampl_gt_limit>0.007" + add_tag
+        else:
+            return False, "avg_ampl_gt_limit<" + add_tag
 
         return True, "exit"

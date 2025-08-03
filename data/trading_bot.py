@@ -4,8 +4,10 @@ import runtime_data as rd
 
 class TradingBot:
 
-    @classmethod
-    def perform(cls):
+    def __init__(self):
+        self.sl_history = []
+
+    def perform(self):
         if rd.VARS.simulator.balance < 0.01:
             print(f"Cant perform because balance < 0.01. index = {rd.VARS.simulator.current_index}.")
             return
@@ -15,3 +17,6 @@ class TradingBot:
         stop_loss = current_price * 0.98
         rd.VARS.simulator.buy_all_instantly()
         rd.VARS.simulator.order_sell_for_all(price_to_sell, stop_loss)
+
+    def reset(self):
+        self.sl_history = []

@@ -1,9 +1,4 @@
 import importlib
-import time
-from collections import defaultdict
-from html.parser import endtagfind
-from turtledemo.penrose import start
-
 import chart_builder as chb
 import runtime_data as rd
 import trading_bot as tb

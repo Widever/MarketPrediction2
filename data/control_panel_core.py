@@ -11,6 +11,7 @@ import chart_builder as chb
 import trading_simulator as ts
 from data.order import ClosedOrder, SellOrder
 
+all_events = defaultdict(list)
 
 @dataclass
 class Event:
@@ -44,6 +45,19 @@ class ControlPanelCore:
         pass
 
     @classmethod
+    def init_runtime_vars(cls):
+        if rd.VARS.simulator is None:
+            simulator = ts.TradingSimulator()
+            simulator.balance_stable = 1000
+            simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
+
+            rd.VARS.simulator = simulator
+            print("New simulator instance has been set.")
+
+        if rd.VARS.bot is None:
+            rd.VARS.bot = tb.TradingBot()
+
+    @classmethod
     def observe(cls, limit: int) -> Event | None:
         cls._reload_all()
 
@@ -62,6 +76,8 @@ class ControlPanelCore:
             events = rd.VARS.simulator.next()
             if events:
                 is_stop_loss = events and any(x.trigger == "stop_loss" for x in events)
+                if is_stop_loss:
+                    rd.VARS.bot.sl_history.append(rd.VARS.simulator.current_index)
                 is_sell = events and any(isinstance(x.order, SellOrder) and x.trigger == "filled" for x in events)
                 market_event_type = "stop_loss" if is_stop_loss else "sell" if is_sell else None
                 market_event = MarketEvent(type=market_event_type, balance=rd.VARS.simulator.balance)
@@ -203,16 +219,20 @@ class ControlPanelCore:
     @classmethod
     def reset(cls):
         cls._reload_all()
+        cls.init_runtime_vars()
+
         global all_events
         all_events = defaultdict(list)
+
         rd.VARS.simulator.reset()
         reset_disp_cache()
+        rd.VARS.bot.reset()
         print(">> reset done.")
 
     @classmethod
     def perform(cls):
         cls._reload_all()
-        tb.TradingBot().perform()
+        rd.VARS.bot.perform()
         perform_event = MarketEvent(type="perform")
         all_events[rd.VARS.simulator.current_index].append(perform_event)
         print(f">> perform done. i={rd.VARS.simulator.current_index}")
@@ -223,6 +243,8 @@ class ControlPanelCore:
         events = rd.VARS.simulator.next()
         if events:
             is_stop_loss = events and any(x.trigger == "stop_loss" for x in events)
+            if is_stop_loss:
+                rd.VARS.bot.sl_history.append(rd.VARS.simulator.current_index)
             is_sell = events and any(isinstance(x.order, SellOrder) and x.trigger == "filled" for x in events)
             market_event_type = "stop_loss" if is_stop_loss else "sell" if is_sell else None
             market_event = MarketEvent(type=market_event_type, balance=rd.VARS.simulator.balance)

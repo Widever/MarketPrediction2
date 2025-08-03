@@ -38,5 +38,6 @@ init_runtime_data()
 class Vars:
     def __init__(self):
         self.simulator = None
+        self.bot = None
 
 VARS = Vars()
