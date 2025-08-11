@@ -344,27 +344,87 @@ class TradingAnalyzer:
         btc_price_trend_info: PriceTrendInfo
     ):
         last_sl = rd.VARS.bot.sl_history[-1] if rd.VARS.bot.sl_history else None
-        dist_to_last_sl = 10000000000000000 if last_sl is None else rd.VARS.simulator.current_index - last_sl
+        dist_to_last_sl = 50000 if last_sl is None else rd.VARS.simulator.current_index - last_sl
+        lower_disp_1 = dsp.get_disp_1_lower()
+
+        disp_tail = [
+            float(lower_disp_1["disp"].reset_index(drop=True).at[i]) for i in
+            range(rd.VARS.simulator.current_index-13, rd.VARS.simulator.current_index + 1)
+        ]
+
+        avg_disp_tail = mean(disp_tail)
+        extreme_disp = len([x for x in disp_tail if x > 0.88])
 
         if dist_to_last_sl > 60:
-            dist_to_last_sl_str = "very_far"
+            dist_to_last_sl_str = "to_sl_very_far"
         elif dist_to_last_sl > 10:
-            dist_to_last_sl_str = "far"
+            dist_to_last_sl_str = "to_sl_far"
         elif dist_to_last_sl > 3:
-            dist_to_last_sl_str = "close"
+            dist_to_last_sl_str = "to_sl_close"
         else:
-            dist_to_last_sl_str = "very_close"
+            dist_to_last_sl_str = "to_sl_very_close"
 
-        add_tag = f"_to_sl_{dist_to_last_sl_str}"
-        if price_trend_info.avg_ampl_gt_limit > 0.03:
-            return False, "avg_ampl_gt_limit>0.03" + add_tag
-        elif price_trend_info.avg_ampl_gt_limit > 0.013:
-            dec = dist_to_last_sl_str in ("very_close",)
-            return dec, "avg_ampl_gt_limit>0.013" + add_tag
-        elif price_trend_info.avg_ampl_gt_limit > 0.007:
-            dec = dist_to_last_sl_str in ("far", "very_close", "very_far")
-            return dec, "avg_ampl_gt_limit>0.007" + add_tag
+        if extreme_disp > 4:
+            extreme_disp_str = "extreme_disp_many"
+        elif extreme_disp > 1:
+            extreme_disp_str = "extreme_disp_moderate"
         else:
-            return False, "avg_ampl_gt_limit<" + add_tag
+            extreme_disp_str = "extreme_disp_few"
+
+        if price_trend_info.avg_ampl_gt_limit > 0.03:
+            avg_ampl_str = "avg_ampl_gt_limit>0.03"
+        elif price_trend_info.avg_ampl_gt_limit > 0.013:
+            avg_ampl_str = "avg_ampl_gt_limit>0.013"
+        elif price_trend_info.avg_ampl_gt_limit > 0.007:
+            avg_ampl_str = "avg_ampl_gt_limit>0.007"
+        else:
+            avg_ampl_str = "avg_ampl_gt_limit<"
+
+        if avg_disp_tail > 0.5:
+            avg_disp_tail_str = "avg_disp_tail>0.5"
+        elif avg_disp_tail > 0.3:
+            avg_disp_tail_str = "avg_disp_tail>0.3"
+        elif avg_disp_tail > 0.2:
+            avg_disp_tail_str = "avg_disp_tail>0.2"
+        else:
+            avg_disp_tail_str = "avg_disp_tail<"
+
+        if last_trends_info.volume_and_len[-1][0] < 0 and last_trends_info.volume_and_len[-2][0] < 0 and last_trends_info.volume_and_len[-3][0] < 0:
+            down_strick_str = "down_strick_3"
+        elif last_trends_info.volume_and_len[-1][0] < 0 and last_trends_info.volume_and_len[-2][0] < 0:
+            down_strick_str = "down_strick_2"
+        elif last_trends_info.volume_and_len[-1][0] < 0:
+            down_strick_str = "down_strick_1"
+        else:
+            down_strick_str = "down_strick_0"
+
+        if last_trends_info.volume_and_len[-1][0] > 0 and last_trends_info.volume_and_len[-2][0] > 0 and last_trends_info.volume_and_len[-3][0] > 0:
+            up_strick_str = "down_strick_3"
+        elif last_trends_info.volume_and_len[-1][0] > 0 and last_trends_info.volume_and_len[-2][0] > 0:
+            up_strick_str = "up_strick_2"
+        elif last_trends_info.volume_and_len[-1][0] > 0:
+            up_strick_str = "up_strick_1"
+        else:
+            up_strick_str = "up_strick_0"
+
+        reason = f"{dist_to_last_sl_str};{extreme_disp_str};{avg_ampl_str};{avg_disp_tail_str};{up_strick_str};{down_strick_str}"
+
+        sell_div_sl_lt_21 = [
+            # "extreme_disp_few",
+            "avg_disp_tail>0.2",
+            # "to_sl_very_far",
+            "avg_ampl_gt_limit<",
+            "down_strick_0",
+            "to_sl_close",
+            "avg_disp_tail<",
+            "avg_ampl_gt_limit>0.03",
+            "down_strick_3",
+            "up_strick_2",
+        ]
+
+        if any(x in reason for x in sell_div_sl_lt_21):
+            return False, reason
+
+        return True, reason
 
         return True, "exit"

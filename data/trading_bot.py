@@ -8,6 +8,7 @@ class TradingBot:
         self.sl_history = []
 
     def perform(self):
+        print("_____________ v1.2.6 PERF")
         if rd.VARS.simulator.balance < 0.01:
             print(f"Cant perform because balance < 0.01. index = {rd.VARS.simulator.current_index}.")
             return

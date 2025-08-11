@@ -46,7 +46,7 @@ class ControlPanelCore:
 
     @classmethod
     def init_runtime_vars(cls):
-        if rd.VARS.simulator is None:
+        if rd.VARS.simulator is None or 1:
             simulator = ts.TradingSimulator()
             simulator.balance_stable = 1000
             simulator.ohlcv_df = rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df
@@ -54,7 +54,7 @@ class ControlPanelCore:
             rd.VARS.simulator = simulator
             print("New simulator instance has been set.")
 
-        if rd.VARS.bot is None:
+        if rd.VARS.bot is None or 1:
             rd.VARS.bot = tb.TradingBot()
 
     @classmethod
@@ -326,11 +326,23 @@ class ControlPanelCore:
         for start_index_, end_index_, sl_events_, sell_events_, balance_ in intervals_data:
             print(f"\t- i<{end_index_}, {sl_events_}/{sell_events_}, {balance_=}")
 
+        true_decision_stat_by_tag = defaultdict(lambda: [0, 0])
         print("True decision stat:")
         for reason_, count_ in sorted(true_decision_stat.items(), key=lambda x: x[1], reverse=True):
             sl_count = sl_decision_stat[reason_]
+            tags = reason_.split(";")
+            for tag in tags:
+                true_decision_stat_by_tag[tag][0] += count_
+                true_decision_stat_by_tag[tag][1] += sl_count
+
             sell_div_sl_stat = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
             print(f"\t{reason_}: {count_} | sell/sl = {sell_div_sl_stat}")
+
+        print("True decision stat by tag:")
+        for tag, (count_, sl_count) in sorted(true_decision_stat_by_tag.items(), key=lambda x: x[1][0], reverse=True):
+            sell_div_sl_stat = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
+            print(f"\t{tag}: {count_} | sell/sl = {sell_div_sl_stat}")
+
 
         print("False decision stat:")
         for reason_, count_ in sorted(false_decision_stat.items(), key=lambda x: x[1], reverse=True):
