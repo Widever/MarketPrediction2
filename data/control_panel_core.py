@@ -336,28 +336,33 @@ class ControlPanelCore:
                 true_decision_stat_by_tag[tag][1] += sl_count
 
             sell_div_sl_stat = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
-            print(f"\t{reason_}: {count_} | sell/sl = {sell_div_sl_stat}")
+            print(f"\t[r={reason_}]: [c={count_}], [sl={sl_count}]  | [sell/sl={sell_div_sl_stat}]")
 
         print("True decision stat by tag:")
         for tag, (count_, sl_count) in sorted(true_decision_stat_by_tag.items(), key=lambda x: x[1][0], reverse=True):
             sell_div_sl_stat = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
-            print(f"\t{tag}: {count_} | sell/sl = {sell_div_sl_stat}")
+            print(f"\t[t={tag}]: [c={count_}], [sl={sl_count}] | [sell/sl={sell_div_sl_stat}]")
 
 
         print("False decision stat:")
         for reason_, count_ in sorted(false_decision_stat.items(), key=lambda x: x[1], reverse=True):
-            print(f"\t{reason_}: {count_}")
+            print(f"\t[r={reason_}]: [c={count_}]")
 
         print("Stop loss decision stat:")
         for reason_, count_ in sorted(sl_decision_stat.items(), key=lambda x: x[1], reverse=True):
-            print(f"\t{reason_}: {count_}")
+            print(f"\t[r={reason_}]: [c={count_}]")
 
         print("Triggers stat:")
         for reason_, count_ in sorted(trigger_stat.items(), key=lambda x: x[1], reverse=True):
-            print(f"\t{reason_}: {count_}")
+            print(f"\t[r={reason_}]: [c={count_}]")
 
         print("Stop loss triggers stat:")
         for reason_, count_ in sorted(sl_trigger_stat.items(), key=lambda x: x[1], reverse=True):
-            print(f"\t{reason_}: {count_}")
+            print(f"\t[r={reason_}]: [c={count_}]")
 
         print(f"TOTAL: {total_sl_events}/{total_sell_events}")
+
+    @classmethod
+    def optimize(cls):
+        cls._reload_all()
+        return ta.TradingAnalyzer().optimize()

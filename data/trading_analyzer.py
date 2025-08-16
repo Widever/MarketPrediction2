@@ -1,6 +1,12 @@
+import itertools
+import re
+import time
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import auto, IntEnum
 from statistics import mean
+
+import pandas as pd
 
 import dispersion as dsp
 import runtime_data as rd
@@ -67,7 +73,7 @@ class TradingAnalyzer:
             range(rd.VARS.simulator.current_index - 10, rd.VARS.simulator.current_index + 1)
         ]
 
-        if last_disps[-1] > 0.6:
+        if last_disps[-1] > 0.5:
             return True, "big_disp"
         else:
             return False, None
@@ -407,7 +413,60 @@ class TradingAnalyzer:
         else:
             up_strick_str = "up_strick_0"
 
-        reason = f"{dist_to_last_sl_str};{extreme_disp_str};{avg_ampl_str};{avg_disp_tail_str};{up_strick_str};{down_strick_str}"
+        if price_trend_info.trend_len > 12:
+            trend_len_str = "trend_len_long"
+        elif price_trend_info.trend_len > 5:
+            trend_len_str = "trend_len_middle"
+        else:
+            trend_len_str = "trend_len_short"
+
+        if price_trend_info.max_ampl > 0.05:
+            trend_max_ampl_str = "trend_max_ampl>0.05"
+        elif price_trend_info.max_ampl > 0.03:
+            trend_max_ampl_str = "trend_max_ampl>0.03"
+        elif price_trend_info.max_ampl > 0.01:
+            trend_max_ampl_str = "trend_max_ampl>0.01"
+        else:
+            trend_max_ampl_str = "trend_max_ampl<"
+
+        if price_trend_info.trend_kind == PriceTrend.UP:
+            trend_kind_str = "trend_kind_up"
+        elif price_trend_info.trend_kind == PriceTrend.DOWN:
+            trend_kind_str = "trend_kind_down"
+        elif price_trend_info.trend_kind == PriceTrend.FLAT:
+            trend_kind_str = "trend_kind_flat"
+        else:
+            trend_kind_str = "trend_kind_unknown"
+
+        if last_trends_info.volume_and_len[-2][0] < 0:
+            prev_trend_kind_str = "prev_t_kind_down"
+        else:
+            prev_trend_kind_str = "prev_t_kind_up"
+
+        if disp_trend_info.max_disp_change > 0.5:
+            max_disp_change_str = "max_disp_change>0.5"
+        elif disp_trend_info.max_disp_change > 0.3:
+            max_disp_change_str = "max_disp_change>0.3"
+        elif disp_trend_info.max_disp_change > 0.2:
+            max_disp_change_str = "max_disp_change>0.2"
+        else:
+            max_disp_change_str = "max_disp_change<"
+
+        if disp_trend_info.monotone_up:
+            disp_monotone_up_str = "disp_monotone_up_true"
+        else:
+            disp_monotone_up_str = "disp_monotone_up_false"
+
+        if disp_trend_info.avg_disp_change > 0.5:
+            disp_avg_change_str = "disp_avg_change>0.5"
+        elif disp_trend_info.avg_disp_change > 0.3:
+            disp_avg_change_str = "disp_avg_change>0.3"
+        else:
+            disp_avg_change_str = "disp_avg_change<"
+
+        reason = (f"{dist_to_last_sl_str};{extreme_disp_str};{avg_ampl_str};{avg_disp_tail_str};{up_strick_str};{down_strick_str};"
+                  f"{trend_len_str};{trend_max_ampl_str};{trend_kind_str};{prev_trend_kind_str};{max_disp_change_str};{disp_monotone_up_str};"
+                  f"{disp_avg_change_str}")
 
         sell_div_sl_lt_21 = [
             # "extreme_disp_few",
@@ -422,9 +481,79 @@ class TradingAnalyzer:
             "up_strick_2",
         ]
 
-        if any(x in reason for x in sell_div_sl_lt_21):
-            return False, reason
+        sell_div_sl_gt_21 = [
+            "avg_ampl_gt_limit>0.013",
+            "extreme_disp_moderate",
+            "max_disp_change<",
+            "prev_trend_kind_down",
+            "avg_disp_tail>0.5",
+            "extreme_disp_many",
+            "down_strick_2",
+        ]
 
-        return True, reason
+        all_1 = all(x in reason for x in ('trend_kind_down', 'max_disp_change<'))
+        all_2 = all(x in reason for x in ('disp_monotone_up_false', 'extreme_disp_many'))
+        all_3 = all(x in reason for x in ('avg_ampl_gt_limit>0.013', 'prev_trend_kind_down'))
+        all_4 = all(x in reason for x in ('avg_ampl_gt_limit>0.013', 'max_disp_change<'))
+        all_5 = all(x in reason for x in ('trend_max_ampl>0.01', 'avg_disp_tail>0.5'))
+        all_6 = all(x in reason for x in ('down_strick_1', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'))
+        all_7 = all(x in reason for x in ('up_strick_0', 'disp_monotone_up_false', 'disp_avg_change<', 'avg_ampl_gt_limit>0.013'))
+
+        if all_6 or all_7:
+            return True, reason
+
+        return False, reason
 
         return True, "exit"
+
+    def parse_line(self, line: str) -> dict:
+
+        # Extract key=value pairs like [c=123], [sl=45]
+        pairs = re.findall(r"\[(\w+)=(.*?)\]", line)
+        data = {k: v for k, v in pairs}
+
+        return data
+
+    def read_benchmark_output_to_df(self, filename: str) -> pd.DataFrame:
+        with open(filename, "r", encoding="utf-8") as f:
+            rows = [self.parse_line(line.strip()) for line in f if line.strip()]
+        return pd.DataFrame(rows)
+
+
+    def optimize(self):
+        print("optimize")
+        df = self.read_benchmark_output_to_df("optimize/benchmark_output.txt")
+        tag_count = defaultdict(int)
+        for index, row in df.iterrows():
+            for tag in row["r"].split(";"):
+                tag_count[tag] += int(row["c"])
+
+        all_tags = [tag for tag, count_ in sorted(tag_count.items(), key=lambda x: x[1], reverse=True)]
+        combinations = list(itertools.combinations(all_tags, 4))
+        print(f"combinations len: {len(combinations)}")
+
+        start_time = time.time()
+        combination_stat = defaultdict(lambda: [0, 0])
+        for comb in combinations:
+            for index, row in df.iterrows():
+                reason = row["r"]
+                if all(tag in reason for tag in comb):
+                    combination_stat[comb][0] += int(row["c"])
+                    combination_stat[comb][1] += int(row["sl"])
+
+        comb_stats_sorted = [
+            x
+            for x in sorted(
+                (
+                    (comb, (count_, sl, ((count_ - sl) / sl if sl > 0 else sl)))
+                    for comb, (count_, sl) in combination_stat.items() if count_ > 50
+                )
+                , key=lambda x: x[1][2], reverse=True)
+        ]
+        for i, (comb, (count_, sl, k)) in enumerate(comb_stats_sorted):
+            print(f"{comb=}, {count_=}, {sl=}, {k=}")
+            if i>30 :
+                break
+
+        end_time = time.time()
+        print(f"Elapsed: {end_time-start_time}s.")

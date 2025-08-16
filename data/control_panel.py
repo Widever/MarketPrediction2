@@ -29,7 +29,7 @@ def show_panel():
     root.title("Control panel")
 
     root.columnconfigure(0, weight=1)
-    for n_row in range(18):
+    for n_row in range(19):
         root.rowconfigure(n_row, weight=1)  # Рядки розтягуються по вертикалі
 
     command1_button = ttk.Button(root, text="Chart for current index", command=error_decorator(cmd.command1))
@@ -86,8 +86,11 @@ def show_panel():
     command18_button = ttk.Button(root, text="Event stats", command=error_decorator(cmd.command18))
     command18_button.grid(row=17, column=0, sticky="nsew")
 
+    command19_button = ttk.Button(root, text="Optimize", command=error_decorator(cmd.command19))
+    command19_button.grid(row=18, column=0, sticky="nsew")
+
     reimport_button = ttk.Button(root, text="Reimport", command=error_decorator(reimport))
-    reimport_button.grid(row=18, column=0, sticky="nsew")
+    reimport_button.grid(row=19, column=0, sticky="nsew")
 
     root.mainloop()
 

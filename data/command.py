@@ -116,3 +116,7 @@ def command18():
     _reload_all()
     cpc.ControlPanelCore.get_event_stats()
 
+def command19():
+    _reload_all()
+    cpc.ControlPanelCore.optimize()
+
