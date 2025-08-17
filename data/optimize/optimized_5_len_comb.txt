@@ -1,0 +1,35 @@
+optimize
+combinations len: 962598
+comb=('up_strick_0', 'trend_kind_down', 'disp_monotone_up_false', 'to_sl_very_close', 'avg_disp_tail>0.5'), count_=56, sl=9, k=5.222222222222222
+comb=('up_strick_0', 'disp_monotone_up_false', 'trend_len_short', 'to_sl_very_close', 'avg_ampl_gt_limit>0.013'), count_=56, sl=9, k=5.222222222222222
+comb=('trend_kind_down', 'disp_monotone_up_false', 'trend_len_short', 'to_sl_very_close', 'avg_ampl_gt_limit>0.013'), count_=56, sl=9, k=5.222222222222222
+comb=('up_strick_0', 'trend_kind_down', 'disp_monotone_up_false', 'to_sl_very_close', 'avg_ampl_gt_limit>0.013'), count_=68, sl=11, k=5.181818181818182
+comb=('up_strick_0', 'prev_t_kind_up', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=55, sl=9, k=5.111111111111111
+comb=('up_strick_0', 'down_strick_1', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=55, sl=9, k=5.111111111111111
+comb=('trend_kind_down', 'prev_t_kind_up', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=55, sl=9, k=5.111111111111111
+comb=('trend_kind_down', 'down_strick_1', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=55, sl=9, k=5.111111111111111
+comb=('prev_t_kind_up', 'down_strick_1', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=55, sl=9, k=5.111111111111111
+comb=('up_strick_0', 'trend_kind_down', 'trend_len_short', 'avg_ampl_gt_limit>0.013', 'max_disp_change<'), count_=54, sl=9, k=5.0
+comb=('up_strick_0', 'trend_kind_down', 'disp_monotone_up_false', 'disp_avg_change<', 'avg_ampl_gt_limit>0.013'), count_=51, sl=9, k=4.666666666666667
+comb=('up_strick_0', 'trend_kind_down', 'disp_monotone_up_false', 'to_sl_very_close', 'max_disp_change<'), count_=68, sl=12, k=4.666666666666667
+comb=('up_strick_0', 'trend_kind_down', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=73, sl=13, k=4.615384615384615
+comb=('up_strick_0', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=58, sl=11, k=4.2727272727272725
+comb=('trend_kind_down', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=58, sl=11, k=4.2727272727272725
+comb=('up_strick_0', 'trend_kind_down', 'disp_avg_change<', 'to_sl_very_close', 'max_disp_change<'), count_=52, sl=10, k=4.2
+comb=('up_strick_0', 'prev_t_kind_up', 'trend_max_ampl>0.01', 'disp_avg_change<', 'to_sl_very_close'), count_=57, sl=11, k=4.181818181818182
+comb=('up_strick_0', 'down_strick_1', 'trend_max_ampl>0.01', 'disp_avg_change<', 'to_sl_very_close'), count_=57, sl=11, k=4.181818181818182
+comb=('trend_kind_down', 'prev_t_kind_up', 'trend_max_ampl>0.01', 'disp_avg_change<', 'to_sl_very_close'), count_=57, sl=11, k=4.181818181818182
+comb=('trend_kind_down', 'down_strick_1', 'trend_max_ampl>0.01', 'disp_avg_change<', 'to_sl_very_close'), count_=57, sl=11, k=4.181818181818182
+comb=('prev_t_kind_up', 'down_strick_1', 'trend_max_ampl>0.01', 'disp_avg_change<', 'to_sl_very_close'), count_=57, sl=11, k=4.181818181818182
+comb=('up_strick_0', 'trend_kind_down', 'prev_t_kind_up', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=67, sl=13, k=4.153846153846154
+comb=('up_strick_0', 'trend_kind_down', 'down_strick_1', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=67, sl=13, k=4.153846153846154
+comb=('up_strick_0', 'prev_t_kind_up', 'down_strick_1', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=67, sl=13, k=4.153846153846154
+comb=('trend_kind_down', 'prev_t_kind_up', 'down_strick_1', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=67, sl=13, k=4.153846153846154
+comb=('up_strick_0', 'disp_monotone_up_false', 'trend_len_short', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=51, sl=10, k=4.1
+comb=('trend_kind_down', 'disp_monotone_up_false', 'trend_len_short', 'trend_max_ampl>0.01', 'max_disp_change<'), count_=51, sl=10, k=4.1
+comb=('up_strick_0', 'trend_kind_down', 'trend_len_short', 'disp_avg_change<', 'avg_ampl_gt_limit>0.013'), count_=56, sl=11, k=4.090909090909091
+comb=('up_strick_0', 'prev_t_kind_up', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=55, sl=11, k=4.0
+comb=('up_strick_0', 'down_strick_1', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=55, sl=11, k=4.0
+comb=('trend_kind_down', 'prev_t_kind_up', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=55, sl=11, k=4.0
+comb=('trend_kind_down', 'down_strick_1', 'trend_max_ampl>0.01', 'disp_avg_change<', 'max_disp_change<'), count_=55, sl=11, k=4.0
+Elapsed: 45896.10650110245s.

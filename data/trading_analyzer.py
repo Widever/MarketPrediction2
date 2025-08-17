@@ -464,7 +464,7 @@ class TradingAnalyzer:
         else:
             disp_avg_change_str = "disp_avg_change<"
 
-        reason = (f"{dist_to_last_sl_str};{extreme_disp_str};{avg_ampl_str};{avg_disp_tail_str};{up_strick_str};{down_strick_str};"
+        reason = (f"{extreme_disp_str};{avg_ampl_str};{avg_disp_tail_str};{up_strick_str};{down_strick_str};"
                   f"{trend_len_str};{trend_max_ampl_str};{trend_kind_str};{prev_trend_kind_str};{max_disp_change_str};{disp_monotone_up_str};"
                   f"{disp_avg_change_str}")
 
@@ -498,8 +498,37 @@ class TradingAnalyzer:
         all_5 = all(x in reason for x in ('trend_max_ampl>0.01', 'avg_disp_tail>0.5'))
         all_6 = all(x in reason for x in ('down_strick_1', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'))
         all_7 = all(x in reason for x in ('up_strick_0', 'disp_monotone_up_false', 'disp_avg_change<', 'avg_ampl_gt_limit>0.013'))
+        all_8 = all(x in reason for x in ('trend_kind_down', 'prev_t_kind_up', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'))
 
-        if all_6 or all_7:
+        true_combs = [
+            ('trend_max_ampl<', 'max_disp_change>0.5', 'disp_monotone_up_true'),
+            ('disp_monotone_up_true', 'prev_t_kind_down'),
+            ('trend_max_ampl<', 'down_strick_3'),
+            ('max_disp_change<', 'disp_avg_change>0.3', 'extreme_disp_moderate'),
+            ('disp_avg_change<', 'disp_monotone_up_true', 'extreme_disp_moderate'),
+            ('prev_t_kind_up', 'avg_disp_tail>0.2', 'trend_kind_up'),
+            ('prev_t_kind_down', 'extreme_disp_many', 'avg_ampl_gt_limit>0.03'),
+            ('avg_ampl_gt_limit>0.013', 'up_strick_1', 'trend_max_ampl>0.03'),
+            ('down_strick_1', 'max_disp_change<', 'avg_disp_tail>0.5'),
+            ('avg_disp_tail>0.2', 'trend_len_middle', 'max_disp_change<'),
+            ('down_strick_1', 'extreme_disp_moderate', 'max_disp_change<'),
+            ('max_disp_change>0.3', 'avg_disp_tail>0.3', 'trend_len_middle'),
+            ('trend_max_ampl>0.01', 'avg_disp_tail<', 'disp_avg_change>0.5'),
+            ('trend_len_short', 'max_disp_change<', 'up_strick_1'),
+            ('trend_kind_down', 'disp_monotone_up_false', 'extreme_disp_many'),
+            ('disp_avg_change<', 'avg_disp_tail>0.3', 'disp_monotone_up_true'),
+            ('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'trend_len_long'),
+            ('avg_ampl_gt_limit>0.007', 'down_strick_2'),
+            ('disp_monotone_up_false', 'avg_ampl_gt_limit>0.007', 'max_disp_change>0.2'),
+            ('max_disp_change>0.3', 'avg_ampl_gt_limit>0.007', 'avg_disp_tail<'),
+            ('prev_t_kind_up', 'trend_len_long', 'max_disp_change<'),
+            ('trend_len_middle', 'disp_avg_change>0.3', 'extreme_disp_moderate'),
+            ('avg_ampl_gt_limit<', 'avg_disp_tail>0.2', 'disp_avg_change>0.3'),
+            ('disp_monotone_up_false', 'max_disp_change>0.3', 'extreme_disp_moderate'),
+            ('trend_len_short', 'avg_disp_tail>0.3', 'up_strick_1'),
+        ]
+
+        if any(all(tag in reason for tag in comb) for comb in true_combs):
             return True, reason
 
         return False, reason
@@ -519,17 +548,28 @@ class TradingAnalyzer:
             rows = [self.parse_line(line.strip()) for line in f if line.strip()]
         return pd.DataFrame(rows)
 
-
-    def optimize(self):
-        print("optimize")
+    def _optimize(self, exclude_combs: list[tuple[str]]):
         df = self.read_benchmark_output_to_df("optimize/benchmark_output.txt")
+
+        print(f"before filter {len(df)=}")
+        print(f"exclude: {exclude_combs}")
+        df_filtered = df[~df["r"].apply(
+            lambda x: any(all(exclude_tag in x for exclude_tag in exclude_comb) for exclude_comb in exclude_combs)
+        )]
+        df = df_filtered
+        print(f"after filter {len(df)=}")
+
         tag_count = defaultdict(int)
         for index, row in df.iterrows():
             for tag in row["r"].split(";"):
                 tag_count[tag] += int(row["c"])
 
         all_tags = [tag for tag, count_ in sorted(tag_count.items(), key=lambda x: x[1], reverse=True)]
-        combinations = list(itertools.combinations(all_tags, 4))
+
+        combinations = list(itertools.combinations(all_tags, 1))
+        combinations += list(itertools.combinations(all_tags, 2))
+        combinations += list(itertools.combinations(all_tags, 3))
+
         print(f"combinations len: {len(combinations)}")
 
         start_time = time.time()
@@ -546,14 +586,33 @@ class TradingAnalyzer:
             for x in sorted(
                 (
                     (comb, (count_, sl, ((count_ - sl) / sl if sl > 0 else sl)))
-                    for comb, (count_, sl) in combination_stat.items() if count_ > 50
+                    for comb, (count_, sl) in combination_stat.items() if count_ > 10
                 )
                 , key=lambda x: x[1][2], reverse=True)
         ]
         for i, (comb, (count_, sl, k)) in enumerate(comb_stats_sorted):
             print(f"{comb=}, {count_=}, {sl=}, {k=}")
-            if i>30 :
+            if i > 100:
                 break
 
         end_time = time.time()
-        print(f"Elapsed: {end_time-start_time}s.")
+        print(f"Elapsed: {end_time - start_time}s.")
+
+    def optimize(self):
+        print("optimize")
+        selected_combs = []
+        while True:
+            self._optimize(selected_combs)
+            user_input = input("Exclude comb: ")
+            if user_input == "stop":
+                break
+
+            exclude_comb = tuple(res for s in user_input.split(",") if (res := s.strip().replace("'", "")))
+            selected_combs.append(exclude_comb)
+
+        print(">>> selected_combs: ")
+        for comb in selected_combs:
+            print(comb)
+
+    def big_benchmark_count(self) -> int:
+        return 60000

@@ -189,7 +189,8 @@ class ControlPanelCore:
     @classmethod
     def benchmark_big(cls):
         cls._reload_all()
-        return cls._benchmark(20000)
+        big_benchmark_count = ta.TradingAnalyzer().big_benchmark_count()
+        return cls._benchmark(big_benchmark_count)
 
     @classmethod
     def _benchmark(cls, limit: int):
