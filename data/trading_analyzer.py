@@ -1,3 +1,4 @@
+import csv
 import itertools
 import re
 import time
@@ -10,6 +11,7 @@ import pandas as pd
 
 import dispersion as dsp
 import runtime_data as rd
+from data.control_panel_core import DecisionEvent, MarketEvent
 
 
 class PriceTrend(IntEnum):
@@ -500,22 +502,22 @@ class TradingAnalyzer:
         all_7 = all(x in reason for x in ('up_strick_0', 'disp_monotone_up_false', 'disp_avg_change<', 'avg_ampl_gt_limit>0.013'))
         all_8 = all(x in reason for x in ('trend_kind_down', 'prev_t_kind_up', 'disp_monotone_up_false', 'trend_max_ampl>0.01', 'max_disp_change<'))
 
-        true_combs = [
-            ('down_strick_1', 'max_disp_change<', 'extreme_disp_moderate'),
-            ('up_strick_0', 'max_disp_change<', 'extreme_disp_many'),
-            ('trend_len_short', 'up_strick_1', 'avg_ampl_gt_limit>0.013'),
-            ('trend_len_short', 'avg_disp_tail>0.3', 'up_strick_1'),
-            ('extreme_disp_few', 'disp_monotone_up_false', 'down_strick_3'),
-            ('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'down_strick_0'),
-            ('disp_monotone_up_false', 'disp_avg_change>0.3', 'avg_disp_tail>0.5'),
-            ('trend_len_short', 'trend_max_ampl<', 'max_disp_change>0.5'),
-            ('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'extreme_disp_moderate'),
-        ]
+        # true_combs = [
+        #     ('down_strick_1', 'max_disp_change<', 'extreme_disp_moderate'),
+        #     ('up_strick_0', 'max_disp_change<', 'extreme_disp_many'),
+        #     ('trend_len_short', 'up_strick_1', 'avg_ampl_gt_limit>0.013'),
+        #     ('trend_len_short', 'avg_disp_tail>0.3', 'up_strick_1'),
+        #     ('extreme_disp_few', 'disp_monotone_up_false', 'down_strick_3'),
+        #     ('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'down_strick_0'),
+        #     ('disp_monotone_up_false', 'disp_avg_change>0.3', 'avg_disp_tail>0.5'),
+        #     ('trend_len_short', 'trend_max_ampl<', 'max_disp_change>0.5'),
+        #     ('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'extreme_disp_moderate'),
+        # ]
+        #
+        # if any(all(tag in reason for tag in comb) for comb in true_combs):
+        #     return True, reason
 
-        if any(all(tag in reason for tag in comb) for comb in true_combs):
-            return True, reason
-
-        return False, reason
+        return True, reason
 
         return True, "exit"
 
@@ -533,44 +535,61 @@ class TradingAnalyzer:
         return pd.DataFrame(rows)
 
     def _optimize(self, exclude_combs: list[tuple[str]]):
-        df = self.read_benchmark_output_to_df("optimize/benchmark_output.txt")
+        df = pd.read_csv("optimize/marked_events_40k.csv")
 
-        print(f"before filter {len(df)=}")
-        print(f"exclude: {exclude_combs}")
-        df_filtered = df[~df["r"].apply(
-            lambda x: any(all(exclude_tag in x for exclude_tag in exclude_comb) for exclude_comb in exclude_combs)
-        )]
-        df = df_filtered
-        print(f"after filter {len(df)=}")
+        tags = set(tag for index, row in df.iterrows() for tag in row["reason"].split(";"))
+        wide_df_data = []
 
-        tag_count = defaultdict(int)
         for index, row in df.iterrows():
-            for tag in row["r"].split(";"):
-                tag_count[tag] += int(row["c"])
+            reason = row["reason"]
+            reason_tags = reason.split(";")
 
-        all_tags = [tag for tag, count_ in sorted(tag_count.items(), key=lambda x: x[1], reverse=True)]
+            wide_row = {k: 1 if k in reason_tags else 0 for k in tags}
+            wide_row["index"] = row["index"]
+            wide_row["sl"] = row["sl"]
+            wide_df_data.append(wide_row)
 
-        combinations = list(itertools.combinations(all_tags, 1))
-        combinations += list(itertools.combinations(all_tags, 2))
-        combinations += list(itertools.combinations(all_tags, 3))
+        wide_df = pd.DataFrame(wide_df_data)
+        print(f"before filter {len(wide_df)=}")
+        print(f"exclude: {exclude_combs}")
 
+        mask = None
+        for exclude_comb in exclude_combs:
+            mask_ = (wide_df[list(exclude_comb)] == 1).all(axis=1)
+            if mask is None:
+                mask = mask_
+            else:
+                mask = mask | mask_
+
+        if mask is not None:
+            wide_df = wide_df[~mask]
+
+        print(f"after filter {len(wide_df)=}")
+
+        combinations = list(itertools.combinations(tags, 1))
+        combinations += list(itertools.combinations(tags, 2))
+        combinations += list(itertools.combinations(tags, 3))
+        # combinations += list(itertools.combinations(tags, 4))
         print(f"combinations len: {len(combinations)}")
 
         start_time = time.time()
-        combination_stat = defaultdict(lambda: [0, 0])
+        combinations_stat = defaultdict(lambda: [0, 0])
         for comb in combinations:
-            for index, row in df.iterrows():
-                reason = row["r"]
-                if all(tag in reason for tag in comb):
-                    combination_stat[comb][0] += int(row["c"])
-                    combination_stat[comb][1] += int(row["sl"])
+            mask = (wide_df[list(comb)] == 1).all(axis=1)
+            comb_df = wide_df[mask]
+
+            count_ = len(comb_df)
+            sl_count = comb_df["sl"].sum()
+
+            combinations_stat[comb][0] += int(count_)
+            combinations_stat[comb][1] += int(sl_count)
 
         comb_stats_sorted = [
             x
             for x in sorted(
                 (
                     (comb, (count_, sl, ((count_ - sl) / sl if sl > 0 else sl)))
-                    for comb, (count_, sl) in combination_stat.items() if count_ > 25
+                    for comb, (count_, sl) in combinations_stat.items() if count_ > 25
                 )
                 , key=lambda x: x[1][2], reverse=True)
         ]
@@ -591,9 +610,112 @@ class TradingAnalyzer:
         rd.VARS.simulator.current_index = i
         print(f"Set current index {i=}.")
 
+    def _check_fast_benchmark(self):
+        # OPTIMIZE 60k, MAX COMB LEN 3
+        selected_combs = [
+            (('up_strick_0', 'max_disp_change<', 'extreme_disp_many'), (26, 3, 7.666666666666667)),
+            (('avg_ampl_gt_limit>0.013', 'up_strick_1', 'trend_len_short'), (33, 4, 7.25)),
+            (('avg_disp_tail>0.3', 'up_strick_1', 'trend_len_short'), (29, 4, 6.25)),
+            (('down_strick_0', 'avg_ampl_gt_limit>0.007', 'disp_avg_change<'), (34, 6, 4.666666666666667)),
+            (('down_strick_1', 'extreme_disp_moderate', 'max_disp_change<'), (28, 5, 4.6)),
+            (('disp_monotone_up_false', 'avg_disp_tail>0.5', 'disp_avg_change>0.3'), (27, 5, 4.4)),
+            (('disp_monotone_up_false', 'trend_kind_up', 'disp_avg_change>0.3'), (27, 5, 4.4)),
+            (('trend_kind_up', 'max_disp_change>0.5', 'trend_len_long'), (26, 5, 4.2)),
+            (('max_disp_change<', 'prev_t_kind_up', 'trend_len_long'), (26, 5, 4.2)),
+        ]
+
+        # OPTIMIZE 60k, MAX COMB LEN 4
+        selected_combs = [
+            (('up_strick_1', 'trend_len_short', 'max_disp_change<', 'trend_max_ampl>0.01'), (30, 3, 9.0)),
+            (('up_strick_0', 'extreme_disp_many', 'max_disp_change<'), (26, 3, 7.666666666666667)),
+            (('avg_disp_tail>0.3', 'avg_ampl_gt_limit>0.007', 'disp_monotone_up_true', 'extreme_disp_few'),
+             (47, 7, 5.714285714285714)),
+            (('trend_len_long', 'prev_t_kind_up', 'avg_disp_tail>0.2', 'trend_max_ampl>0.01'), (26, 4, 5.5)),
+            (('avg_disp_tail>0.3', 'extreme_disp_moderate', 'down_strick_1', 'disp_avg_change<'), (31, 5, 5.2)),
+            (('avg_disp_tail>0.3', 'avg_ampl_gt_limit<', 'trend_max_ampl>0.01', 'extreme_disp_few'), (30, 5, 5.0)),
+            (('prev_t_kind_down', 'disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'extreme_disp_few'), (29, 5, 4.8)),
+            (('up_strick_1', 'avg_ampl_gt_limit>0.013'), (27, 5, 4.4)),
+            (('up_strick_0', 'max_disp_change>0.5', 'trend_len_short', 'trend_max_ampl<'), (32, 6, 4.333333333333333)),
+            (('down_strick_3', 'disp_avg_change<', 'extreme_disp_few'), (26, 5, 4.2)),
+        ]
+
+        # OPTIMIZE 40k, MAX COMB LEN 4
+        selected_combs = [
+            (('extreme_disp_moderate', 'prev_t_kind_down', 'trend_len_short', 'trend_max_ampl>0.01'), (32, 4, 7.0)),
+            (('prev_t_kind_down', 'extreme_disp_many'), (29, 4, 6.25)),
+            (('avg_disp_tail>0.5', 'up_strick_0', 'avg_ampl_gt_limit>0.013', 'disp_avg_change<'), (26, 4, 5.5)),
+            (('down_strick_1', 'trend_len_short', 'max_disp_change>0.5', 'trend_max_ampl<'), (30, 5, 5.0)),
+            (('avg_ampl_gt_limit>0.007', 'avg_disp_tail>0.3', 'disp_monotone_up_true', 'extreme_disp_few'),
+             (40, 7, 4.714285714285714)),
+            (('avg_disp_tail<', 'trend_len_middle', 'trend_max_ampl<', 'max_disp_change>0.3'), (28, 5, 4.6)),
+            (('disp_avg_change<', 'avg_ampl_gt_limit>0.007', 'down_strick_0'), (27, 5, 4.4)),
+            (('trend_len_short', 'disp_avg_change>0.3', 'down_strick_0'), (26, 5, 4.2)),
+            (('avg_ampl_gt_limit<', 'trend_max_ampl>0.01', 'avg_disp_tail>0.3', 'extreme_disp_few'), (26, 5, 4.2)),
+            (('trend_len_long', 'avg_disp_tail>0.2', 'up_strick_0', 'max_disp_change>0.3'), (31, 6, 4.166666666666667)),
+        ]
+
+        # OPTIMIZE 40k, MAX COMB LEN 3
+        selected_combs = [
+            (('avg_ampl_gt_limit>0.013', 'trend_len_short', 'up_strick_1'), (31, 4, 6.75)),
+            (('up_strick_0', 'disp_monotone_up_false', 'extreme_disp_many'), (34, 5, 5.8)),
+            (('trend_len_short', 'disp_avg_change>0.3', 'down_strick_0'), (26, 4, 5.5)),
+            (('prev_t_kind_down', 'disp_avg_change<', 'avg_ampl_gt_limit>0.007'), (32, 6, 4.333333333333333)),
+            (('trend_len_short', 'max_disp_change>0.5', 'trend_max_ampl<'), (35, 7, 4.0)),
+        ]
+
+
+        selected_combs = [x[0] for x in selected_combs]
+
+        df = pd.read_csv("optimize/marked_events.csv")
+
+        tags = set(tag for index, row in df.iterrows() for tag in row["reason"].split(";"))
+        wide_df_data = []
+
+        for index, row in df.iterrows():
+            reason = row["reason"]
+            reason_tags = reason.split(";")
+
+            wide_row = {k: 1 if k in reason_tags else 0 for k in tags}
+            wide_row["index"] = row["index"]
+            wide_row["sl"] = row["sl"]
+            wide_df_data.append(wide_row)
+
+        wide_df = pd.DataFrame(wide_df_data)
+
+        mask = None
+        for selected_comb in selected_combs:
+            mask_ = (wide_df[list(selected_comb)] == 1).all(axis=1)
+            if mask is None:
+                mask = mask_
+            else:
+                mask = mask | mask_
+
+        wide_df = wide_df[mask]
+
+        wide_df["interval"] = pd.cut(wide_df["index"], bins=10)
+
+        intervals_stat = wide_df.groupby("interval", observed=False).agg(
+            count_=("index", "size"),
+            sl_count_=("sl", "sum"),
+        ).reset_index()
+
+        intervals_stat["k"] = (intervals_stat["count_"] - intervals_stat["sl_count_"]) / intervals_stat["sl_count_"]
+        total_count = intervals_stat["count_"].sum()
+        total_sl_count = intervals_stat["sl_count_"].sum()
+        total_k = (total_count - total_sl_count) / total_sl_count
+
+        pd.set_option("display.max_rows", None)
+        pd.set_option("display.max_columns", None)
+        print("Intervals stat:")
+        print(intervals_stat)
+        print()
+        print(f"Total: {total_count=}, {total_sl_count=}, {total_k=}")
+
     def optimize(self):
-        self._go_to_index()
+        self._check_fast_benchmark()
         return
+        # self._go_to_index()
+        # return
         print("optimize")
         selected_combs = []
         selected_combs_info = []
@@ -620,10 +742,36 @@ class TradingAnalyzer:
 
         print(">>> selected_combs_info: ")
         for info in selected_combs_info:
-            print(info)
+            print(info, ",")
 
         end_time = time.time()
         print(f"Elapsed time: {(end_time-start_time)/60} min.")
 
     def big_benchmark_count(self) -> int:
         return 60000
+
+    def extract_events(self, events):
+
+        last_true_decision_event: DecisionEvent | None = None
+
+        output_filename = "optimize/marked_events_new.csv"
+        with open(output_filename, "w", newline="", encoding="utf-8") as csvfile:
+            writer = csv.writer(csvfile)
+
+            columns = ["index", "reason", "sl"]
+            writer.writerow(columns)
+
+            for index, events in sorted(events.items(), key=lambda x: x[0]):
+                for event in events:
+                    if event.__class__.__name__ == "DecisionEvent":
+                        if event.decision:
+                            last_true_decision_event = event
+
+                    elif event.__class__.__name__ == "MarketEvent" and event.type == "sell":
+                        assert last_true_decision_event is not None
+                        writer.writerow([index, last_true_decision_event.decision_reason, 0])
+
+
+                    elif event.__class__.__name__ == "MarketEvent" and event.type == "stop_loss":
+                        assert last_true_decision_event is not None
+                        writer.writerow([index, last_true_decision_event.decision_reason, 1])

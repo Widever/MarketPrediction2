@@ -262,6 +262,9 @@ class ControlPanelCore:
     @classmethod
     def get_event_stats(cls):
         cls._reload_all()
+
+        ta.TradingAnalyzer().extract_events(all_events)
+
         last_interval_start_index = None
 
         intervals_data = []

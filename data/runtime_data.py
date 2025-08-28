@@ -33,7 +33,7 @@ def init_runtime_data():
         currency_data.update()
 
 print("DSCLMR")
-init_runtime_data()
+# init_runtime_data()
 
 class Vars:
     def __init__(self):
