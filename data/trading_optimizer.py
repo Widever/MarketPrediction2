@@ -3,6 +3,7 @@ import itertools
 import time
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 import runtime_data as rd
@@ -553,39 +554,54 @@ class TradingOptimizer:
 
     def get_select_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
 
+        n = len(marked_points_df)
+
+        combs_masks = [
+            marked_points_df[list(comb)].astype(bool).all(axis=1)
+            for comb in combs
+        ]
+
+        any_comb = np.logical_or.reduce(combs_masks) if combs_masks else np.zeros(n, dtype=bool)
+
+        mask = np.zeros(n, dtype=bool)
         skip = 0
-        mask = []
-        for _, row in marked_points_df.iterrows():
+        scopes = marked_points_df["scope"].to_numpy()
+
+        for i in range(n):
             if skip > 0:
                 skip -= 1
-                mask.append(False)
                 continue
 
-            combs_values = [all([bool(row[tag]) for tag in comb]) for comb in combs]
-            if any(combs_values):
-                mask.append(True)
-                skip = int(row["scope"])
-            else:
-                mask.append(False)
+            if any_comb[i]:
+                mask[i] = True
+                skip = int(scopes[i])
 
         return pd.Series(mask, index=marked_points_df.index)
 
     def get_exclude_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
 
+        n = len(marked_points_df)
+
+        combs_masks = [
+            marked_points_df[list(comb)].astype(bool).all(axis=1)
+            for comb in combs
+        ]
+
+        any_comb = np.logical_or.reduce(combs_masks) if combs_masks else np.zeros(n, dtype=bool)
+
+        mask = np.ones(n, dtype=bool)
         skip = 0
-        mask = []
-        for _, row in marked_points_df.iterrows():
+        scopes = marked_points_df["scope"].to_numpy()
+
+        for i in range(n):
             if skip > 0:
                 skip -= 1
-                mask.append(False)
+                mask[i] = False
                 continue
 
-            combs_values = [all([bool(row[tag]) for tag in comb]) for comb in combs]
-            if any(combs_values):
-                mask.append(False)
-                skip = int(row["scope"])
-            else:
-                mask.append(True)
+            if any_comb[i]:
+                mask[i] = False
+                skip = int(scopes[i])
 
         return pd.Series(mask, index=marked_points_df.index)
 
@@ -713,7 +729,28 @@ class TradingOptimizer:
 
     def super_benchmark(self):
 
-        combs: list[CombGrade] = [CombGrade(("current_disp_gt_05",), 0, 0, 0, 0)]
+        combs: list[CombGrade] = [
+            CombGrade(comb=('extreme_disp_many',), count_=227, sl_count=58, uniformity=0.6828193832599119,
+                      k=2.913793103448276),
+            CombGrade(comb=('down_strick_3',), count_=67, sl_count=20, uniformity=0.6865671641791045, k=2.35),
+            CombGrade(comb=('trend_max_ampl_gt_0_03',), count_=187, sl_count=58, uniformity=0.732620320855615,
+                      k=2.2241379310344827),
+            CombGrade(comb=('avg_disp_tail_gt_05',), count_=225, sl_count=70, uniformity=0.7466666666666666,
+                      k=2.2142857142857144),
+            CombGrade(comb=('disp_avg_change_gt_05',), count_=772, sl_count=249, uniformity=0.7979274611398963,
+                      k=2.1004016064257027),
+            CombGrade(comb=('max_disp_lt',), count_=969, sl_count=313, uniformity=0.8761609907120743,
+                      k=2.0958466453674123),
+            CombGrade(comb=('extreme_disp_moderate',), count_=309, sl_count=99, uniformity=0.7831715210355987,
+                      k=2.121212121212121),
+            CombGrade(comb=('min_disp_gt_02',), count_=404, sl_count=127, uniformity=0.7896039603960396,
+                      k=2.1811023622047245),
+            CombGrade(comb=('disp_avg_change_gt_03',), count_=618, sl_count=196, uniformity=0.8268608414239482,
+                      k=2.1530612244897958),
+            CombGrade(comb=('min_disp_gt_01',), count_=473, sl_count=151, uniformity=0.8224101479915433,
+                      k=2.1324503311258276),
+            CombGrade(comb=('up_strick_3',), count_=184, sl_count=57, uniformity=0.875, k=2.2280701754385963),
+        ]
 
         marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
 
