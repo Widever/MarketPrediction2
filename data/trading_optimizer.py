@@ -11,6 +11,8 @@ from statistics import mean
 import dispersion as dsp
 from trading_analyzer import PriceTrendInfo, PriceTrend, DispTrendInfo, LastTrendsInfo
 
+DATA_DIR: str | None = None
+
 
 @dataclass(slots=True)
 class PointAttrs:
@@ -642,24 +644,24 @@ class TradingOptimizer:
             k=k
         )
 
-    def choose_comb(self, marked_points_df: pd.DataFrame, all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
+    def choose_comb(self, train_marked_points_df: pd.DataFrame, verify_marked_points_df: pd.DataFrame, all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
 
         print(f"Selected combs count: {len(selected_combs)}.")
         if selected_combs:
-            exclude_mask = self.get_exclude_combs_mask(marked_points_df, [selected_comb.comb for selected_comb in selected_combs])
-            marked_points_df = marked_points_df[exclude_mask].reset_index(drop=True)
+            exclude_mask = self.get_exclude_combs_mask(train_marked_points_df, [selected_comb.comb for selected_comb in selected_combs])
+            train_marked_points_df = train_marked_points_df[exclude_mask].reset_index(drop=True)
 
-        print(f"Df len after exclude selected: {len(marked_points_df)}.")
+        print(f"Df len after exclude selected: {len(train_marked_points_df)}.")
 
         comb_grades = []
         for comb in all_combs:
             start_time = time.time()
-            select_mask = self.get_select_combs_mask(marked_points_df, [comb])
+            select_mask = self.get_select_combs_mask(train_marked_points_df, [comb])
             end_time = time.time()
             # print(f"Get mask elapsed time: {end_time-start_time}")
 
             start_time = time.time()
-            comb_df = marked_points_df[select_mask]
+            comb_df = train_marked_points_df[select_mask]
             end_time = time.time()
             # print(f"Apply mask elapsed time: {end_time-start_time}")
 
@@ -669,11 +671,33 @@ class TradingOptimizer:
         comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.k, reverse=True))
 
         for comb_grade in comb_grades_sorted:
+
+            if comb_grade.k < 3.5:
+                break
+
             if comb_grade.count_ < 20:
                 continue
 
             if comb_grade.uniformity < 0.6:
                 continue
+
+            # Check overlearning
+            if selected_combs:
+                verify_exclude_mask = self.get_exclude_combs_mask(verify_marked_points_df, [selected_comb.comb for selected_comb in selected_combs])
+                verify_marked_points_df = verify_marked_points_df[verify_exclude_mask].reset_index(drop=True)
+
+            verify_select_mask = self.get_select_combs_mask(verify_marked_points_df, [comb_grade.comb])
+            verify_comb_df = verify_marked_points_df[verify_select_mask]
+
+            verify_comb_grade = self.grade_comb(verify_comb_df, comb_grade.comb, interval_bins)
+
+            if verify_comb_grade.count_ < 10:
+                continue
+
+            if verify_comb_grade.k < 3.0:
+                continue
+
+            print(f"Verify comb grade: {verify_comb_grade}.")
 
             return comb_grade
 
@@ -681,15 +705,16 @@ class TradingOptimizer:
 
     def optimal_combs(self) -> list[CombGrade]:
         full_time_start = time.time()
-        marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
+        train_marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_train.csv")
+        verify_marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_verify.csv")
 
-        interval_bins = pd.cut(marked_points_df["index"], bins=12).cat.categories
-        print(f"Full df len: {len(marked_points_df)}")
+        interval_bins = pd.cut(train_marked_points_df["index"], bins=12).cat.categories
+        print(f"Full df len: {len(train_marked_points_df)}")
 
         tags = list(dataclasses.asdict(PointAttrs()).keys())
         combinations = list(itertools.combinations(tags, 1))
         combinations += list(itertools.combinations(tags, 2))
-        # combinations += list(itertools.combinations(tags, 3))
+        combinations += list(itertools.combinations(tags, 3))
         combs: list[tuple[str, ...]] = combinations
 
         print(f"All combs len: {len(combs)}")
@@ -697,9 +722,14 @@ class TradingOptimizer:
 
         while True:
             try:
+                if len(selected_combs) > 10:
+                    break
+
                 print("Start choosing comb...")
                 start_time = time.time()
-                comb_grade = self.choose_comb(marked_points_df, combs, selected_combs, interval_bins)
+
+                comb_grade = self.choose_comb(train_marked_points_df, verify_marked_points_df, combs, selected_combs, interval_bins)
+                selected_combs.append(comb_grade)
 
                 print("Chosen comb:")
                 print(comb_grade)
@@ -707,10 +737,6 @@ class TradingOptimizer:
                 end_time = time.time()
                 print(f"For this comb elapsed {end_time-start_time}s.")
 
-                if comb_grade.k > 4.0:
-                    selected_combs.append(comb_grade)
-                else:
-                    break
             except RuntimeError as e:
                 print(e)
                 break
@@ -730,25 +756,17 @@ class TradingOptimizer:
     def super_benchmark(self):
 
         combs: list[CombGrade] = [
-            CombGrade(comb=('down_strick_2', 'trend_max_ampl_gt_0_03'), count_=20, sl_count=3, uniformity=0.55,
-                      k=5.666666666666667),
-            CombGrade(comb=('extreme_disp_many', 'current_disp_gt_02'), count_=40, sl_count=7, uniformity=0.65,
-                      k=4.714285714285714),
-            CombGrade(comb=('down_strick_3', 'min_disp_lt'), count_=22, sl_count=4, uniformity=0.7272727272727273,
-                      k=4.5),
-            CombGrade(comb=('avg_ampl_gt_limit_gt_0_03', 'trend_max_ampl_gt_0_03'), count_=43, sl_count=8,
-                      uniformity=0.6976744186046512, k=4.375),
-            CombGrade(comb=('avg_ampl_gt_limit_gt_0_013', 'down_strick_3'), count_=23, sl_count=4,
-                      uniformity=0.6086956521739131, k=4.75),
-            CombGrade(comb=('extreme_disp_many', 'max_disp_change_gt_03'), count_=21, sl_count=4,
-                      uniformity=0.5238095238095238, k=4.25),
-            CombGrade(comb=('up_strick_3', 'max_disp_change_gt_05'), count_=91, sl_count=18,
-                      uniformity=0.8571428571428572, k=4.055555555555555),
-            CombGrade(comb=('extreme_disp_moderate', 'trend_kind_flat'), count_=23, sl_count=4,
-                      uniformity=0.7391304347826086, k=4.75),
+            CombGrade(comb=('extreme_disp_moderate', 'down_strick_0', 'trend_len_long'), count_=25, sl_count=4,
+                      uniformity=0.72, k=5.25),
+            CombGrade(comb=('avg_ampl_gt_limit_lt', 'up_strick_3', 'max_disp_change_gt_05'), count_=38, sl_count=8,
+                      uniformity=0.8421052631578947, k=3.75),
+            CombGrade(comb=('prev_t_kind_down', 'max_disp_gt_04', 'min_disp_gt_03'), count_=106, sl_count=23,
+                      uniformity=0.7452830188679245, k=3.608695652173913),
+            CombGrade(comb=('avg_disp_tail_gt_05', 'trend_len_short', 'min_disp_lt'), count_=105, sl_count=23,
+                      uniformity=0.7619047619047619, k=3.5652173913043477),
         ]
 
-        marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
+        marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
 
         select_mask = self.get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
 
@@ -773,12 +791,24 @@ class TradingOptimizer:
         print()
         print(f"Total: {total_count=}, {total_sl_count=}, {total_k=}")
 
+    def split_marked_data(self):
+        marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
+        train_set_size = 70000
+        first = marked_points_df.iloc[:train_set_size].copy()
+        second = marked_points_df.iloc[train_set_size:].copy()
+
+        first.to_csv(f"{DATA_DIR}/marked_points_train.csv")
+        second.to_csv(f"{DATA_DIR}/marked_points_verify.csv")
+
 
 if __name__ == "__main__":
+    DATA_DIR = "optimize2"
+
     optimizer = TradingOptimizer()
     # res = optimizer.mark_data()
-    # res.to_csv("optimize2/marked_points.csv", index=False)
+    # res.to_csv(f"{DATA_DIR}/marked_points.csv", index=False)
 
     # opt = optimizer.optimal_combs()
+    # opt = optimizer.split_marked_data()
     opt = optimizer.super_benchmark()
     # print(res)
