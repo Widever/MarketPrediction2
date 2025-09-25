@@ -123,8 +123,8 @@ def get_disp_1_lower() -> pd.DataFrame:
 
     name_in_cache = "disp_1_lower"
 
-    if (cached_disp := _DISP_CACHE.get(name_in_cache)) is not None:
-        return cached_disp
+    # if (cached_disp := _DISP_CACHE.get(name_in_cache)) is not None:
+    #     return cached_disp
 
     disp = _get_lower_disp_for_set(set_1)
 
