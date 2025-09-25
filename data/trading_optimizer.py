@@ -83,7 +83,7 @@ class MarkedPoint:
 
 @dataclass(slots=True)
 class CombGrade:
-    comb: tuple[str] | None
+    comb: tuple[str, ...] | None
     count_: int
     sl_count: int
     uniformity: float
@@ -552,7 +552,7 @@ class TradingOptimizer:
         print(f"Elapsed time: {end_time-start_time}s.")
         return marked_points_df
 
-    def get_select_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
+    def get_select_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
 
         n = len(marked_points_df)
 
@@ -578,7 +578,7 @@ class TradingOptimizer:
 
         return pd.Series(mask, index=marked_points_df.index)
 
-    def get_exclude_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
+    def get_exclude_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
 
         n = len(marked_points_df)
 
@@ -628,7 +628,7 @@ class TradingOptimizer:
         k = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
         return k
 
-    def grade_comb(self, comb_df: pd.DataFrame, comb: tuple[str], interval_bins) -> CombGrade:
+    def grade_comb(self, comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins) -> CombGrade:
         count_ = len(comb_df)
         sl_count = int(comb_df["sl"].sum())
         uniformity = self._comb_uniformity(comb_df, interval_bins)
@@ -642,7 +642,7 @@ class TradingOptimizer:
             k=k
         )
 
-    def choose_comb(self, marked_points_df: pd.DataFrame, all_combs: list[tuple[str]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
+    def choose_comb(self, marked_points_df: pd.DataFrame, all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
 
         print(f"Selected combs count: {len(selected_combs)}.")
         if selected_combs:
@@ -672,7 +672,7 @@ class TradingOptimizer:
             if comb_grade.count_ < 20:
                 continue
 
-            if comb_grade.uniformity < 0.5:
+            if comb_grade.uniformity < 0.6:
                 continue
 
             return comb_grade
@@ -688,9 +688,9 @@ class TradingOptimizer:
 
         tags = list(dataclasses.asdict(PointAttrs()).keys())
         combinations = list(itertools.combinations(tags, 1))
-        # combinations += list(itertools.combinations(tags, 2))
+        combinations += list(itertools.combinations(tags, 2))
         # combinations += list(itertools.combinations(tags, 3))
-        combs: list[tuple[str]] = combinations
+        combs: list[tuple[str, ...]] = combinations
 
         print(f"All combs len: {len(combs)}")
         selected_combs: list[CombGrade] = []
@@ -707,7 +707,7 @@ class TradingOptimizer:
                 end_time = time.time()
                 print(f"For this comb elapsed {end_time-start_time}s.")
 
-                if comb_grade.k > 2.0:
+                if comb_grade.k > 4.0:
                     selected_combs.append(comb_grade)
                 else:
                     break
@@ -730,26 +730,22 @@ class TradingOptimizer:
     def super_benchmark(self):
 
         combs: list[CombGrade] = [
-            CombGrade(comb=('extreme_disp_many',), count_=227, sl_count=58, uniformity=0.6828193832599119,
-                      k=2.913793103448276),
-            CombGrade(comb=('down_strick_3',), count_=67, sl_count=20, uniformity=0.6865671641791045, k=2.35),
-            CombGrade(comb=('trend_max_ampl_gt_0_03',), count_=187, sl_count=58, uniformity=0.732620320855615,
-                      k=2.2241379310344827),
-            CombGrade(comb=('avg_disp_tail_gt_05',), count_=225, sl_count=70, uniformity=0.7466666666666666,
-                      k=2.2142857142857144),
-            CombGrade(comb=('disp_avg_change_gt_05',), count_=772, sl_count=249, uniformity=0.7979274611398963,
-                      k=2.1004016064257027),
-            CombGrade(comb=('max_disp_lt',), count_=969, sl_count=313, uniformity=0.8761609907120743,
-                      k=2.0958466453674123),
-            CombGrade(comb=('extreme_disp_moderate',), count_=309, sl_count=99, uniformity=0.7831715210355987,
-                      k=2.121212121212121),
-            CombGrade(comb=('min_disp_gt_02',), count_=404, sl_count=127, uniformity=0.7896039603960396,
-                      k=2.1811023622047245),
-            CombGrade(comb=('disp_avg_change_gt_03',), count_=618, sl_count=196, uniformity=0.8268608414239482,
-                      k=2.1530612244897958),
-            CombGrade(comb=('min_disp_gt_01',), count_=473, sl_count=151, uniformity=0.8224101479915433,
-                      k=2.1324503311258276),
-            CombGrade(comb=('up_strick_3',), count_=184, sl_count=57, uniformity=0.875, k=2.2280701754385963),
+            CombGrade(comb=('down_strick_2', 'trend_max_ampl_gt_0_03'), count_=20, sl_count=3, uniformity=0.55,
+                      k=5.666666666666667),
+            CombGrade(comb=('extreme_disp_many', 'current_disp_gt_02'), count_=40, sl_count=7, uniformity=0.65,
+                      k=4.714285714285714),
+            CombGrade(comb=('down_strick_3', 'min_disp_lt'), count_=22, sl_count=4, uniformity=0.7272727272727273,
+                      k=4.5),
+            CombGrade(comb=('avg_ampl_gt_limit_gt_0_03', 'trend_max_ampl_gt_0_03'), count_=43, sl_count=8,
+                      uniformity=0.6976744186046512, k=4.375),
+            CombGrade(comb=('avg_ampl_gt_limit_gt_0_013', 'down_strick_3'), count_=23, sl_count=4,
+                      uniformity=0.6086956521739131, k=4.75),
+            CombGrade(comb=('extreme_disp_many', 'max_disp_change_gt_03'), count_=21, sl_count=4,
+                      uniformity=0.5238095238095238, k=4.25),
+            CombGrade(comb=('up_strick_3', 'max_disp_change_gt_05'), count_=91, sl_count=18,
+                      uniformity=0.8571428571428572, k=4.055555555555555),
+            CombGrade(comb=('extreme_disp_moderate', 'trend_kind_flat'), count_=23, sl_count=4,
+                      uniformity=0.7391304347826086, k=4.75),
         ]
 
         marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
@@ -783,6 +779,6 @@ if __name__ == "__main__":
     # res = optimizer.mark_data()
     # res.to_csv("optimize2/marked_points.csv", index=False)
 
-    opt = optimizer.optimal_combs()
-    # opt = optimizer.super_benchmark()
+    # opt = optimizer.optimal_combs()
+    opt = optimizer.super_benchmark()
     # print(res)
