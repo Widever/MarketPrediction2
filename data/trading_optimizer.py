@@ -490,6 +490,7 @@ class TradingOptimizer:
         return point_attrs
 
     def mark_data(self):
+        start_time = time.time()
         closed_points: list[MarkedPoint] = []
         symbol = "ADAUSDT"
 
@@ -497,7 +498,12 @@ class TradingOptimizer:
         lower_disp_1 = dsp.get_disp_1_lower()
         opened_points: list[MarkedPoint] = []
 
+        df_len = len(ohlcv_df)
+        print(f"OHLCV df len = {df_len}. Start marking data...")
         for idx, row in ohlcv_df.iterrows():
+            if idx % 10000 == 0:
+                print(f"Marked {idx}/{df_len} points.")
+
             if idx < 50:
                 continue
             close_price = float(row["close"])
@@ -541,9 +547,11 @@ class TradingOptimizer:
             marked_points_df_data.append(marked_point_dict)
 
         marked_points_df = pd.DataFrame(marked_points_df_data)
+        end_time = time.time()
+        print(f"Elapsed time: {end_time-start_time}s.")
         return marked_points_df
 
-    def get_select_comb_mask(self, marked_points_df: pd.DataFrame, comb: tuple[str]) -> pd.Series:
+    def get_select_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
 
         skip = 0
         mask = []
@@ -553,12 +561,31 @@ class TradingOptimizer:
                 mask.append(False)
                 continue
 
-            comb_values = [bool(row[tag]) for tag in comb]
-            if all(comb_values):
+            combs_values = [all([bool(row[tag]) for tag in comb]) for comb in combs]
+            if any(combs_values):
                 mask.append(True)
                 skip = int(row["scope"])
             else:
                 mask.append(False)
+
+        return pd.Series(mask, index=marked_points_df.index)
+
+    def get_exclude_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str]]) -> pd.Series:
+
+        skip = 0
+        mask = []
+        for _, row in marked_points_df.iterrows():
+            if skip > 0:
+                skip -= 1
+                mask.append(False)
+                continue
+
+            combs_values = [all([bool(row[tag]) for tag in comb]) for comb in combs]
+            if any(combs_values):
+                mask.append(False)
+                skip = int(row["scope"])
+            else:
+                mask.append(True)
 
         return pd.Series(mask, index=marked_points_df.index)
 
@@ -602,26 +629,34 @@ class TradingOptimizer:
     def choose_comb(self, marked_points_df: pd.DataFrame, all_combs: list[tuple[str]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
 
         print(f"Selected combs count: {len(selected_combs)}.")
-        for selected_comb in selected_combs:
-            select_mask = self.get_select_comb_mask(marked_points_df, selected_comb.comb)
-            marked_points_df = marked_points_df[~select_mask].reset_index(drop=True)
+        if selected_combs:
+            exclude_mask = self.get_exclude_combs_mask(marked_points_df, [selected_comb.comb for selected_comb in selected_combs])
+            marked_points_df = marked_points_df[exclude_mask].reset_index(drop=True)
 
         print(f"Df len after exclude selected: {len(marked_points_df)}.")
 
         comb_grades = []
         for comb in all_combs:
-            select_mask = self.get_select_comb_mask(marked_points_df, comb)
+            start_time = time.time()
+            select_mask = self.get_select_combs_mask(marked_points_df, [comb])
+            end_time = time.time()
+            # print(f"Get mask elapsed time: {end_time-start_time}")
+
+            start_time = time.time()
             comb_df = marked_points_df[select_mask]
+            end_time = time.time()
+            # print(f"Apply mask elapsed time: {end_time-start_time}")
+
             comb_grade = self.grade_comb(comb_df, comb, interval_bins)
             comb_grades.append(comb_grade)
 
         comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.k, reverse=True))
 
         for comb_grade in comb_grades_sorted:
-            if comb_grade.count_ < 1:
+            if comb_grade.count_ < 20:
                 continue
 
-            if comb_grade.uniformity < 0.1:
+            if comb_grade.uniformity < 0.5:
                 continue
 
             return comb_grade
@@ -630,14 +665,14 @@ class TradingOptimizer:
 
     def optimal_combs(self) -> list[CombGrade]:
         full_time_start = time.time()
-        marked_points_df = optimizer.mark_data()
+        marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
 
         interval_bins = pd.cut(marked_points_df["index"], bins=12).cat.categories
         print(f"Full df len: {len(marked_points_df)}")
 
         tags = list(dataclasses.asdict(PointAttrs()).keys())
         combinations = list(itertools.combinations(tags, 1))
-        combinations += list(itertools.combinations(tags, 2))
+        # combinations += list(itertools.combinations(tags, 2))
         # combinations += list(itertools.combinations(tags, 3))
         combs: list[tuple[str]] = combinations
 
@@ -676,8 +711,41 @@ class TradingOptimizer:
 
         return selected_combs
 
+    def super_benchmark(self):
+
+        combs: list[CombGrade] = [CombGrade(("current_disp_gt_05",), 0, 0, 0, 0)]
+
+        marked_points_df = pd.read_csv("optimize2/marked_points_frozen.csv")
+
+        select_mask = self.get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
+
+        selected_df = marked_points_df[select_mask].reset_index(drop=True)
+
+        selected_df["interval"] = pd.cut(selected_df["index"], bins=12)
+
+        intervals_stat = selected_df.groupby("interval", observed=False).agg(
+            count_=("index", "size"),
+            sl_count_=("sl", "sum"),
+        ).reset_index()
+
+        intervals_stat["k"] = (intervals_stat["count_"] - intervals_stat["sl_count_"]) / intervals_stat["sl_count_"]
+        total_count = intervals_stat["count_"].sum()
+        total_sl_count = intervals_stat["sl_count_"].sum()
+        total_k = (total_count - total_sl_count) / total_sl_count if total_sl_count > 0 else 0
+
+        pd.set_option("display.max_rows", None)
+        pd.set_option("display.max_columns", None)
+        print("Intervals stat:")
+        print(intervals_stat)
+        print()
+        print(f"Total: {total_count=}, {total_sl_count=}, {total_k=}")
+
 
 if __name__ == "__main__":
     optimizer = TradingOptimizer()
-    res = optimizer.optimal_combs()
+    # res = optimizer.mark_data()
+    # res.to_csv("optimize2/marked_points.csv", index=False)
+
+    opt = optimizer.optimal_combs()
+    # opt = optimizer.super_benchmark()
     # print(res)
