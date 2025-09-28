@@ -1,7 +1,9 @@
 import dataclasses
 import itertools
+import os
 import time
 from dataclasses import dataclass
+from typing import get_origin, get_args
 
 import numpy as np
 import pandas as pd
@@ -9,73 +11,43 @@ import pandas as pd
 import runtime_data as rd
 from statistics import mean
 import dispersion as dsp
-from trading_analyzer import PriceTrendInfo, PriceTrend, DispTrendInfo, LastTrendsInfo
+from trading_analyzer import PriceTrendInfo, DispTrendInfo, PriceTrend
 
 DATA_DIR: str | None = None
 
-
 @dataclass(slots=True)
-class PointAttrs:
-    extreme_disp_many: bool = False
-    extreme_disp_moderate: bool = False
-    extreme_disp_few: bool = False
-    avg_ampl_gt_limit_gt_0_03: bool = False
-    avg_ampl_gt_limit_gt_0_013: bool = False
-    avg_ampl_gt_limit_gt_0_007: bool = False
-    avg_ampl_gt_limit_lt: bool = False
-    avg_disp_tail_gt_05: bool = False
-    avg_disp_tail_gt_03: bool = False
-    avg_disp_tail_gt_02: bool = False
-    avg_disp_tail_lt: bool = False
-    down_strick_3: bool = False
-    down_strick_2: bool = False
-    down_strick_1: bool = False
-    down_strick_0: bool = False
-    up_strick_3: bool = False
-    up_strick_2: bool = False
-    up_strick_1: bool = False
-    up_strick_0: bool = False
-    trend_len_long: bool = False
-    trend_len_middle: bool = False
-    trend_len_short: bool = False
-    trend_max_ampl_gt_0_05: bool = False
-    trend_max_ampl_gt_0_03: bool = False
-    trend_max_ampl_gt_0_01: bool = False
-    trend_max_ampl_lt: bool = False
-    trend_kind_up: bool = False
-    trend_kind_down: bool = False
-    trend_kind_flat: bool = False
-    trend_kind_unknown: bool = False
-    prev_t_kind_down: bool = False
-    prev_t_kind_up: bool = False
-    max_disp_change_gt_05: bool = False
-    max_disp_change_gt_03: bool = False
-    max_disp_change_gt_02: bool = False
-    max_disp_change_lt: bool = False
-    disp_monotone_up_true: bool = False
-    disp_monotone_up_false: bool = False
-    disp_avg_change_gt_05: bool = False
-    disp_avg_change_gt_03: bool = False
-    disp_avg_change_lt: bool = False
-    max_disp_gt_06: bool = False
-    max_disp_gt_04: bool = False
-    max_disp_gt_02: bool = False
-    max_disp_lt: bool = False
-    min_disp_gt_03: bool = False
-    min_disp_gt_02: bool = False
-    min_disp_gt_01: bool = False
-    min_disp_lt: bool = False
-    current_disp_gt_05: bool = False
-    current_disp_gt_03: bool = False
-    current_disp_gt_02: bool = False
-    current_disp_gt_01: bool = False
-    current_disp_lt: bool = False
+class PointValues:
+    in_point_price_ampl: float
+    in_point_growth: bool
+    in_point_price_abs_change: float
+    trend_avg_ampl: float
+    trend_avg_ampl_gt_limit: float
+    trend_max_ampl: float
+    trend_min_ampl: float
+    current_trend_kind: str
+    current_trend_len: int
+    current_trend_abs_change: float
+    prev_trend_kind: str
+    prev_trend_abs_change: float
+
+    in_point_disp: float
+    tail_extreme_disp_ratio: float
+    tail_extreme_disp_count: int
+    tail_avg_disp: float
+    trend_extreme_disp_ratio: float
+    trend_extreme_disp_count: int
+    trend_avg_disp: float
+    trend_avg_disp_gt_limit: float
+    trend_max_disp: float
+    trend_min_disp: float
+    trend_disp_uniformity: float
+    trend_disp_growth: bool
 
 @dataclass(slots=True)
 class MarkedPoint:
     index: int
     timestamp: int
-    attrs: PointAttrs
+    values: PointValues
 
     sl_price_limit: float
     sell_price_limit: float
@@ -182,7 +154,7 @@ class TradingOptimizer:
         trend_ohlcva = []
 
         for trend_i in range(trend_start_index, trend_start_index+trend_len):
-            i_open_price = int(ohlcv_df["open"].iat[trend_i])
+            i_open_price = float(ohlcv_df["open"].iat[trend_i])
             i_high_price = float(ohlcv_df["high"].iat[trend_i])
             i_low_price = float(ohlcv_df["low"].iat[trend_i])
             i_close_price = float(ohlcv_df["close"].iat[trend_i])
@@ -324,173 +296,132 @@ class TradingOptimizer:
             is_saddle=is_saddle
         )
 
-    def get_last_trends(self, ohlcv_df, for_index: int, n: int = 5) -> LastTrendsInfo:
-        info = []
+    def get_last_trends(self, ohlcv_df, for_index: int, n: int = 5) -> list[PriceTrendInfo]:
+        infos = []
         last_start_i = for_index
         for _ in range(n):
             trend_info = self.get_price_trend(ohlcv_df, for_index=last_start_i)
-            volume = trend_info.trend_value
-            info.append((volume, trend_info.trend_len))
+            infos.append(trend_info)
 
             last_start_i = trend_info.trend_start_index
 
             if trend_info.trend_len == 1:
                 last_start_i -= 1
 
-        info = list(reversed(info))
-        # msg = ", ".join([f"{round(v, 4)}/{l}" for v, l in info])
-        # print(f"Last {n} trend volumes: {msg}.")
+        infos = list(reversed(infos))
+        return infos
 
-        sum_volume_of_last_3 = sum(abs(x[0]) for x in info[-3:])
-        sum_last_2 = abs(sum(x[0] for x in info[-2:]))
-        # print(f"Last 3 trends volume sum: {sum_volume_of_last_3}")
-        return LastTrendsInfo(
-            volume_and_len=info,
-            sum_volume_of_last_3=sum_volume_of_last_3,
-            sum_last_2=sum_last_2
-        )
-
-    def create_point_attrs(self, ohlcv_df: pd.DataFrame, lower_disp_1, idx: int):
+    def point_values(self, ohlcv_df: pd.DataFrame, lower_disp_1, idx: int) -> PointValues:
         price_trend_info = self.get_price_trend(ohlcv_df, idx)
         disp_trend_info = self.get_disp_trend(lower_disp_1, idx, price_trend_info.trend_len)
         last_trends_info = self.get_last_trends(ohlcv_df, idx)
 
-        disp_tail = [
+        AMPL_LIMIT = 0.002
+        TREND_DISP_LIMIT = 0.01
+
+        _in_point_open = price_trend_info.trend_ohlcva[-1][0]
+        _in_point_close = price_trend_info.trend_ohlcva[-1][3]
+        _in_point_ampl = price_trend_info.trend_ohlcva[-1][5]
+        _in_point_price_change = _in_point_close / _in_point_open - 1
+        _trend_ampls = [x[5] for x in price_trend_info.trend_ohlcva]
+        _trend_ampls_gt_limit = [x for x in _trend_ampls if x > AMPL_LIMIT]
+        _tail_disps = [
             float(lower_disp_1["disp"].iat[i]) for i in
             range(idx - 13, idx + 1)
         ]
+        _tail_extreme_disps = [x for x in _tail_disps if x > 0.88]
+        _trend_disps = disp_trend_info.disps_on_trend
+        _trend_extreme_disps = [x for x in _trend_disps if x > 0.88]
+        _trend_disps_gt_limit = [x for x in _trend_disps if x > TREND_DISP_LIMIT]
 
-        assert lower_disp_1["disp"].iat[idx] == disp_tail[-1]
+        _trend_disp_first_part = _trend_disps[:int(len(_trend_disps)/2)]
+        _trend_disp_second_part = _trend_disps[int(len(_trend_disps)/2):]
+        _trend_disp_growth = mean(_trend_disp_second_part) > mean(_trend_disp_first_part) * 1.2 if len(_trend_disps) > 2 else False
 
-        avg_disp_tail = mean(disp_tail)
-        extreme_disp = len([x for x in disp_tail if x > 0.88])
+        assert lower_disp_1["disp"].iat[idx] == _tail_disps[-1]
 
-        point_attrs = PointAttrs()
+        return PointValues(
+            in_point_price_ampl=_in_point_ampl,
+            in_point_growth = _in_point_price_change > 0,
+            in_point_price_abs_change = abs(_in_point_price_change),
+            trend_avg_ampl = mean(_trend_ampls),
+            trend_avg_ampl_gt_limit = mean(_trend_ampls_gt_limit) if _trend_ampls_gt_limit else 0,
+            trend_max_ampl = max(_trend_ampls),
+            trend_min_ampl = min(_trend_ampls),
+            current_trend_kind = price_trend_info.trend_kind.name,
+            current_trend_len = price_trend_info.trend_len,
+            current_trend_abs_change = abs(price_trend_info.trend_value),
+            prev_trend_kind = last_trends_info[-2].trend_kind.name,
+            prev_trend_abs_change = abs(last_trends_info[-2].trend_value),
 
-        if extreme_disp > 4:
-            point_attrs.extreme_disp_many = True
-        elif extreme_disp > 1:
-            point_attrs.extreme_disp_moderate = True
-        else:
-            point_attrs.extreme_disp_few = True
+            in_point_disp = _tail_disps[-1],
+            tail_extreme_disp_ratio = len(_tail_extreme_disps) / len(_tail_disps),
+            tail_extreme_disp_count = len(_tail_extreme_disps),
+            tail_avg_disp = mean(_tail_disps),
+            trend_extreme_disp_ratio = len(_trend_extreme_disps) / len(_trend_disps),
+            trend_extreme_disp_count = len(_trend_extreme_disps),
+            trend_avg_disp = mean(_trend_disps),
+            trend_avg_disp_gt_limit = mean(_trend_disps_gt_limit) if _trend_disps_gt_limit else 0,
+            trend_max_disp = max(_trend_disps),
+            trend_min_disp = min(_trend_disps),
+            trend_disp_uniformity = 1.0,
+            trend_disp_growth = _trend_disp_growth,
+        )
 
-        if price_trend_info.avg_ampl_gt_limit > 0.03:
-            point_attrs.avg_ampl_gt_limit_gt_0_03 = True
-        elif price_trend_info.avg_ampl_gt_limit > 0.013:
-            point_attrs.avg_ampl_gt_limit_gt_0_013 = True
-        elif price_trend_info.avg_ampl_gt_limit > 0.007:
-            point_attrs.avg_ampl_gt_limit_gt_0_007 = True
-        else:
-            point_attrs.avg_ampl_gt_limit_lt = True
+    def _add_interval_tag_columns(self, df: pd.DataFrame, col: str, n_intervals: int) -> pd.DataFrame:
+        # Get min and max
+        min_val, max_val = df[col].min(), df[col].max()
 
-        if avg_disp_tail > 0.5:
-            point_attrs.avg_disp_tail_gt_05 = True
-        elif avg_disp_tail > 0.3:
-            point_attrs.avg_disp_tail_gt_03 = True
-        elif avg_disp_tail > 0.2:
-            point_attrs.avg_disp_tail_gt_02 = True
-        else:
-            point_attrs.avg_disp_tail_lt = True
+        # Build intervals
+        bins = np.linspace(min_val, max_val, n_intervals + 1)
 
-        if last_trends_info.volume_and_len[-1][0] < 0 and last_trends_info.volume_and_len[-2][0] < 0 and \
-                last_trends_info.volume_and_len[-3][0] < 0:
-            point_attrs.down_strick_3 = True
-        elif last_trends_info.volume_and_len[-1][0] < 0 and last_trends_info.volume_and_len[-2][0] < 0:
-            point_attrs.down_strick_2 = True
-        elif last_trends_info.volume_and_len[-1][0] < 0:
-            point_attrs.down_strick_1 = True
-        else:
-            point_attrs.down_strick_0 = True
+        for i in range(n_intervals):
+            left, right = bins[i], bins[i + 1]
 
-        if last_trends_info.volume_and_len[-1][0] > 0 and last_trends_info.volume_and_len[-2][0] > 0 and \
-                last_trends_info.volume_and_len[-3][0] > 0:
-            point_attrs.up_strick_3 = True
-        elif last_trends_info.volume_and_len[-1][0] > 0 and last_trends_info.volume_and_len[-2][0] > 0:
-            point_attrs.up_strick_2 = True
-        elif last_trends_info.volume_and_len[-1][0] > 0:
-            point_attrs.up_strick_1 = True
-        else:
-            point_attrs.up_strick_0 = True
+            # Last interval include right
+            if i == n_intervals - 1:
+                mask = (df[col] >= left)
+            else:
+                mask = (df[col] >= left) & (df[col] < right)
 
-        if price_trend_info.trend_len > 12:
-            point_attrs.trend_len_long = True
-        elif price_trend_info.trend_len > 5:
-            point_attrs.trend_len_middle = True
-        else:
-            point_attrs.trend_len_short = True
+            df[f"#tag_{col}_int{i + 1}"] = mask
 
-        if price_trend_info.max_ampl > 0.05:
-            point_attrs.trend_max_ampl_gt_0_05 = True
-        elif price_trend_info.max_ampl > 0.03:
-            point_attrs.trend_max_ampl_gt_0_03 = True
-        elif price_trend_info.max_ampl > 0.01:
-            point_attrs.trend_max_ampl_gt_0_01 = True
-        else:
-            point_attrs.trend_max_ampl_lt = True
+        return df
 
-        if price_trend_info.trend_kind == PriceTrend.UP:
-            point_attrs.trend_kind_up = True
-        elif price_trend_info.trend_kind == PriceTrend.DOWN:
-            point_attrs.trend_kind_down = True
-        elif price_trend_info.trend_kind == PriceTrend.FLAT:
-            point_attrs.trend_kind_flat = True
-        else:
-            point_attrs.trend_kind_unknown = True
+    def _add_str_tag_columns(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        unique_values = df[col].unique()
+        for val in unique_values:
+            df[f"{col}_{val}"] = df[col] == val
+        return df
 
-        if last_trends_info.volume_and_len[-2][0] < 0:
-            point_attrs.prev_t_kind_down = True
-        else:
-            point_attrs.prev_t_kind_up = True
+    def _add_bool_tag_columns(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        df[f"#tag_{col}_true"] = df[col]
+        df[f"#tag_{col}_false"] = ~df[col]
+        return df
 
-        if disp_trend_info.max_disp_change > 0.5:
-            point_attrs.max_disp_change_gt_05 = True
-        elif disp_trend_info.max_disp_change > 0.3:
-            point_attrs.max_disp_change_gt_03 = True
-        elif disp_trend_info.max_disp_change > 0.2:
-            point_attrs.max_disp_change_gt_02 = True
-        else:
-            point_attrs.max_disp_change_lt = True
+    def add_tags_for_point_values(self, marked_points_values_df: pd.DataFrame) -> pd.DataFrame:
 
-        if disp_trend_info.monotone_up:
-            point_attrs.disp_monotone_up_true = True
-        else:
-            point_attrs.disp_monotone_up_false = True
+        for f in dataclasses.fields(PointValues):
+            typ = f.type
+            # unwrap Optional[...]
+            if get_origin(typ) is not None and get_origin(typ) is not list:
+                args = get_args(typ)
+                if args:
+                    typ = args[0]
 
-        if disp_trend_info.avg_disp_change > 0.5:
-            point_attrs.disp_avg_change_gt_05 = True
-        elif disp_trend_info.avg_disp_change > 0.3:
-            point_attrs.disp_avg_change_gt_03 = True
-        else:
-            point_attrs.disp_avg_change_lt = True
+            if typ is str:
+                marked_points_values_df = self._add_str_tag_columns(marked_points_values_df, f.name)
+            elif typ in (int, float):
+                n_intervals = f.metadata.get("intervals", 3)
+                marked_points_values_df = self._add_interval_tag_columns(marked_points_values_df, f.name, n_intervals)
+            elif typ is bool:
+                marked_points_values_df = self._add_bool_tag_columns(marked_points_values_df, f.name)
 
-        if disp_trend_info.max_disp > 0.6:
-            point_attrs.max_disp_gt_06 = True
-        elif disp_trend_info.max_disp > 0.4:
-            point_attrs.max_disp_gt_04 = True
-        elif disp_trend_info.max_disp > 0.2:
-            point_attrs.max_disp_gt_02 = True
-        else:
-            point_attrs.max_disp_lt = True
+        return marked_points_values_df
 
-        if disp_trend_info.min_disp > 0.3:
-            point_attrs.min_disp_gt_03 = True
-        elif disp_trend_info.min_disp > 0.2:
-            point_attrs.min_disp_gt_02 = True
-        elif disp_trend_info.min_disp > 0.1:
-            point_attrs.min_disp_gt_01 = True
-        else:
-            point_attrs.min_disp_lt = True
+    def point_tags(self, ohlcv_df: pd.DataFrame, lower_disp_1, idx: int):
+        ...
 
-        if disp_tail[-1] > 0.5:
-            point_attrs.current_disp_gt_05 = True
-        elif disp_tail[-1] > 0.3:
-            point_attrs.current_disp_gt_03 = True
-        elif disp_tail[-1] > 0.2:
-            point_attrs.current_disp_gt_02 = True
-        else:
-            point_attrs.current_disp_lt = True
-
-        return point_attrs
 
     def mark_data(self):
         start_time = time.time()
@@ -528,7 +459,7 @@ class TradingOptimizer:
 
             opened_points = remaining_opened_points
 
-            point_attrs = self.create_point_attrs(ohlcv_df, lower_disp_1, idx)
+            point_values = self.point_values(ohlcv_df, lower_disp_1, idx)
 
             sl_limit_price = 0.98 * close_price
             sell_limit_price = 1.01 * close_price
@@ -536,7 +467,7 @@ class TradingOptimizer:
             new_opened_marked_point = MarkedPoint(
                 index=idx,
                 timestamp=timestamp,
-                attrs=point_attrs,
+                values=point_values,
                 sl_price_limit=sl_limit_price,
                 sell_price_limit=sell_limit_price
             )
@@ -545,11 +476,15 @@ class TradingOptimizer:
         marked_points_df_data = []
         for marked_point in sorted(closed_points, key=lambda x: x.index):
             marked_point_dict = dataclasses.asdict(marked_point)
-            marked_point_dict_attrs = marked_point_dict.pop("attrs")
-            marked_point_dict.update(marked_point_dict_attrs)
+            marked_point_dict_values = marked_point_dict.pop("values")
+            marked_point_dict.update(marked_point_dict_values)
             marked_points_df_data.append(marked_point_dict)
 
         marked_points_df = pd.DataFrame(marked_points_df_data)
+        marked_points_df = self.add_tags_for_point_values(marked_points_df)
+        marked_points_df = marked_points_df.round(5)
+        marked_points_df.to_csv(f"{DATA_DIR}/marked_points_frozen.csv", index=False)
+
         end_time = time.time()
         print(f"Elapsed time: {end_time-start_time}s.")
         return marked_points_df
@@ -675,7 +610,7 @@ class TradingOptimizer:
             if comb_grade.k < 3.5:
                 break
 
-            if comb_grade.count_ < 20:
+            if comb_grade.count_ < 14:
                 continue
 
             if comb_grade.uniformity < 0.6:
@@ -691,7 +626,7 @@ class TradingOptimizer:
 
             verify_comb_grade = self.grade_comb(verify_comb_df, comb_grade.comb, interval_bins)
 
-            if verify_comb_grade.count_ < 10:
+            if verify_comb_grade.count_ < 5:
                 continue
 
             if verify_comb_grade.k < 3.0:
@@ -711,7 +646,7 @@ class TradingOptimizer:
         interval_bins = pd.cut(train_marked_points_df["index"], bins=12).cat.categories
         print(f"Full df len: {len(train_marked_points_df)}")
 
-        tags = list(dataclasses.asdict(PointAttrs()).keys())
+        tags = [x for x in train_marked_points_df.columns if x.startswith("#tag_")]
         combinations = list(itertools.combinations(tags, 1))
         combinations += list(itertools.combinations(tags, 2))
         combinations += list(itertools.combinations(tags, 3))
@@ -756,14 +691,13 @@ class TradingOptimizer:
     def super_benchmark(self):
 
         combs: list[CombGrade] = [
-            CombGrade(comb=('extreme_disp_moderate', 'down_strick_0', 'trend_len_long'), count_=25, sl_count=4,
-                      uniformity=0.72, k=5.25),
-            CombGrade(comb=('avg_ampl_gt_limit_lt', 'up_strick_3', 'max_disp_change_gt_05'), count_=38, sl_count=8,
-                      uniformity=0.8421052631578947, k=3.75),
-            CombGrade(comb=('prev_t_kind_down', 'max_disp_gt_04', 'min_disp_gt_03'), count_=106, sl_count=23,
-                      uniformity=0.7452830188679245, k=3.608695652173913),
-            CombGrade(comb=('avg_disp_tail_gt_05', 'trend_len_short', 'min_disp_lt'), count_=105, sl_count=23,
-                      uniformity=0.7619047619047619, k=3.5652173913043477),
+            CombGrade(comb=('#tag_in_point_disp_int2', '#tag_tail_extreme_disp_ratio_int2', '#tag_tail_avg_disp_int2'),
+                      count_=18, sl_count=1, uniformity=0.6666666666666667, k=17.0),
+            CombGrade(comb=('#tag_in_point_growth_false', '#tag_trend_extreme_disp_count_int2'), count_=20, sl_count=2,
+                      uniformity=0.6, k=9.0),
+            CombGrade(
+                comb=('#tag_tail_avg_disp_int1', '#tag_trend_extreme_disp_ratio_int2', '#tag_trend_disp_growth_false'),
+                count_=32, sl_count=6, uniformity=0.8125, k=4.333333333333333),
         ]
 
         marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
@@ -793,22 +727,24 @@ class TradingOptimizer:
 
     def split_marked_data(self):
         marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
-        train_set_size = 70000
+        marked_points_df = marked_points_df.round(5)
+        train_set_size = 15000
         first = marked_points_df.iloc[:train_set_size].copy()
         second = marked_points_df.iloc[train_set_size:].copy()
 
-        first.to_csv(f"{DATA_DIR}/marked_points_train.csv")
-        second.to_csv(f"{DATA_DIR}/marked_points_verify.csv")
+        first.to_csv(f"{DATA_DIR}/marked_points_train.csv", index=False)
+        second.to_csv(f"{DATA_DIR}/marked_points_verify.csv", index=False)
 
 
 if __name__ == "__main__":
-    DATA_DIR = "optimize2"
+    DATA_DIR = "optimize_15m_interval"
+    os.makedirs(DATA_DIR, exist_ok=True)
 
     optimizer = TradingOptimizer()
-    # res = optimizer.mark_data()
-    # res.to_csv(f"{DATA_DIR}/marked_points.csv", index=False)
 
-    # opt = optimizer.optimal_combs()
+    # rd.init_runtime_data()
+    # opt = optimizer.mark_data()
     # opt = optimizer.split_marked_data()
+    # opt = optimizer.optimal_combs()
     opt = optimizer.super_benchmark()
     # print(res)

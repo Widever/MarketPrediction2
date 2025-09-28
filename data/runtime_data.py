@@ -19,7 +19,7 @@ def init_runtime_data():
         "SUIUSDT",
     )
 
-    lower_bound_timestamp = int(dt.datetime(2024, 9, 24).timestamp() * 1000)
+    lower_bound_timestamp = int(dt.datetime(2025, 1, 5).timestamp() * 1000)
     upper_bound_timestamp = int(dt.datetime.now().timestamp() * 1000)
     binance_data_provider = BinanceDataProvider()
 
