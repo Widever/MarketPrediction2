@@ -2,8 +2,9 @@ import dataclasses
 import itertools
 import os
 import time
+from binance import Client
 from dataclasses import dataclass
-from typing import get_origin, get_args
+from typing import get_origin, get_args, Self
 
 import numpy as np
 import pandas as pd
@@ -62,6 +63,7 @@ class CombGrade:
     sl_count: int
     uniformity: float
     k: float
+    verify_grade: Self | None = None
 
 class TradingOptimizer:
 
@@ -603,14 +605,11 @@ class TradingOptimizer:
             comb_grade = self.grade_comb(comb_df, comb, interval_bins)
             comb_grades.append(comb_grade)
 
-        comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.k, reverse=True))
+        comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.count_, reverse=True))
 
         for comb_grade in comb_grades_sorted:
 
-            if comb_grade.k < 3.5:
-                break
-
-            if comb_grade.count_ < 14:
+            if comb_grade.k < 4:
                 continue
 
             if comb_grade.uniformity < 0.6:
@@ -633,12 +632,13 @@ class TradingOptimizer:
                 continue
 
             print(f"Verify comb grade: {verify_comb_grade}.")
-
+            verify_comb_grade.comb = None
+            comb_grade.verify_grade = verify_comb_grade
             return comb_grade
 
         raise RuntimeError("Not found comb.")
 
-    def optimal_combs(self) -> list[CombGrade]:
+    def optimal_combs(self, limit_comb_n = 10) -> list[CombGrade]:
         full_time_start = time.time()
         train_marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_train.csv")
         verify_marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_verify.csv")
@@ -657,7 +657,7 @@ class TradingOptimizer:
 
         while True:
             try:
-                if len(selected_combs) > 10:
+                if len(selected_combs) > limit_comb_n - 1:
                     break
 
                 print("Start choosing comb...")
@@ -691,13 +691,26 @@ class TradingOptimizer:
     def super_benchmark(self):
 
         combs: list[CombGrade] = [
-            CombGrade(comb=('#tag_in_point_disp_int2', '#tag_tail_extreme_disp_ratio_int2', '#tag_tail_avg_disp_int2'),
-                      count_=18, sl_count=1, uniformity=0.6666666666666667, k=17.0),
-            CombGrade(comb=('#tag_in_point_growth_false', '#tag_trend_extreme_disp_count_int2'), count_=20, sl_count=2,
-                      uniformity=0.6, k=9.0),
             CombGrade(
                 comb=('#tag_tail_avg_disp_int1', '#tag_trend_extreme_disp_ratio_int2', '#tag_trend_disp_growth_false'),
-                count_=32, sl_count=6, uniformity=0.8125, k=4.333333333333333),
+                count_=32, sl_count=6, uniformity=0.8125, k=4.333333333333333,
+                verify_grade=CombGrade(comb=None, count_=11, sl_count=1, uniformity=None, k=10.0, verify_grade=None)),
+            CombGrade(comb=('#tag_trend_extreme_disp_count_int2',), count_=21, sl_count=3,
+                      uniformity=0.6190476190476191, k=6.0,
+                      verify_grade=CombGrade(comb=None, count_=10, sl_count=2, uniformity=None, k=4.0,
+                                             verify_grade=None)),
+            CombGrade(
+                comb=('#tag_tail_extreme_disp_ratio_int2', '#tag_tail_avg_disp_int2', '#tag_trend_disp_growth_true'),
+                count_=16, sl_count=3, uniformity=0.6875, k=4.333333333333333,
+                verify_grade=CombGrade(comb=None, count_=6, sl_count=1, uniformity=None, k=5.0, verify_grade=None)),
+            CombGrade(comb=('#tag_tail_extreme_disp_ratio_int1', '#tag_trend_extreme_disp_ratio_int3',
+                            '#tag_trend_min_disp_int3'), count_=12, sl_count=2, uniformity=0.6666666666666667, k=5.0,
+                      verify_grade=CombGrade(comb=None, count_=5, sl_count=1, uniformity=None, k=4.0,
+                                             verify_grade=None)),
+            CombGrade(
+                comb=('#tag_trend_extreme_disp_ratio_int1', '#tag_trend_min_disp_int2', '#tag_trend_disp_growth_true'),
+                count_=7, sl_count=1, uniformity=0.7142857142857143, k=6.0,
+                verify_grade=CombGrade(comb=None, count_=6, sl_count=1, uniformity=None, k=5.0, verify_grade=None)),
         ]
 
         marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
@@ -728,7 +741,7 @@ class TradingOptimizer:
     def split_marked_data(self):
         marked_points_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
         marked_points_df = marked_points_df.round(5)
-        train_set_size = 15000
+        train_set_size = int(len(marked_points_df) * 0.7)
         first = marked_points_df.iloc[:train_set_size].copy()
         second = marked_points_df.iloc[train_set_size:].copy()
 
@@ -738,13 +751,14 @@ class TradingOptimizer:
 
 if __name__ == "__main__":
     DATA_DIR = "optimize_15m_interval"
+    interval = Client.KLINE_INTERVAL_
     os.makedirs(DATA_DIR, exist_ok=True)
 
     optimizer = TradingOptimizer()
 
-    # rd.init_runtime_data()
+    # rd.init_runtime_data(interval)
     # opt = optimizer.mark_data()
     # opt = optimizer.split_marked_data()
-    # opt = optimizer.optimal_combs()
+    # opt = optimizer.optimal_combs(5)
     opt = optimizer.super_benchmark()
     # print(res)

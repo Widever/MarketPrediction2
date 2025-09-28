@@ -4,15 +4,16 @@ from binance import Client
 
 class BinanceDataProvider:
 
-    def __init__(self):
+    def __init__(self, interval):
         api_key = 'your_api_key'
         api_secret = 'your_api_secret'
         self.client = Client(api_key, api_secret)
+        self.interval = interval
 
     def get_currency_ohlc_data(self, symbol: str, from_timestamp: int, to_timestamp: int | None) -> pd.DataFrame:
         interval = Client.KLINE_INTERVAL_15MINUTE
         klines = self.client.get_historical_klines(
-            symbol, interval, from_timestamp, to_timestamp
+            symbol, self.interval, from_timestamp, to_timestamp
         )
 
         # Convert to a Pandas DataFrame

@@ -2,12 +2,13 @@ from typing import TypedDict, Any
 
 from data.binance_data_provider import BinanceDataProvider
 from data.currency_data import CurrencyData
+from binance import Client
 import datetime as dt
 
 
 CURRENCY_DATAS = {}
 
-def init_runtime_data():
+def init_runtime_data(interval):
     symbols = (
         "BTCUSDT",
         "ETHUSDT",
@@ -21,7 +22,7 @@ def init_runtime_data():
 
     lower_bound_timestamp = int(dt.datetime(2025, 1, 5).timestamp() * 1000)
     upper_bound_timestamp = int(dt.datetime.now().timestamp() * 1000)
-    binance_data_provider = BinanceDataProvider()
+    binance_data_provider = BinanceDataProvider(interval)
 
     for symbol in symbols:
         currency_data = CurrencyData()
