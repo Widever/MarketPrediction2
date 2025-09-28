@@ -370,9 +370,12 @@ class TradingOptimizer:
             trend_disp_growth = _trend_disp_growth,
         )
 
-    def _add_interval_tag_columns(self, df: pd.DataFrame, col: str, n_intervals: int) -> pd.DataFrame:
+    def _add_interval_tag_columns(self, df: pd.DataFrame, col: str, n_intervals: int, min_max = None) -> pd.DataFrame:
         # Get min and max
-        min_val, max_val = df[col].min(), df[col].max()
+        if min_max is None:
+            min_val, max_val = df[col].min(), df[col].max()
+        else:
+            min_val, max_val = min_max
 
         # Build intervals
         bins = np.linspace(min_val, max_val, n_intervals + 1)
@@ -390,8 +393,13 @@ class TradingOptimizer:
 
         return df
 
-    def _add_str_tag_columns(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
-        unique_values = df[col].unique()
+    def _add_str_tag_columns(self, df: pd.DataFrame, col: str, values=None) -> pd.DataFrame:
+
+        if values is None:
+            unique_values = df[col].unique()
+        else:
+            unique_values = values
+
         for val in unique_values:
             df[f"{col}_{val}"] = df[col] == val
         return df
@@ -401,7 +409,12 @@ class TradingOptimizer:
         df[f"#tag_{col}_false"] = ~df[col]
         return df
 
-    def add_tags_for_point_values(self, marked_points_values_df: pd.DataFrame) -> pd.DataFrame:
+    def add_tags_for_point_values(self, marked_points_values_df: pd.DataFrame, use_marked_data_tags=False) -> pd.DataFrame:
+
+        if use_marked_data_tags:
+            marked_data_df = pd.read_csv(f"{DATA_DIR}/marked_points_frozen.csv")
+        else:
+            marked_data_df = None
 
         for f in dataclasses.fields(PointValues):
             typ = f.type
@@ -412,17 +425,22 @@ class TradingOptimizer:
                     typ = args[0]
 
             if typ is str:
-                marked_points_values_df = self._add_str_tag_columns(marked_points_values_df, f.name)
+                if use_marked_data_tags:
+                    values = marked_data_df[f.name].unique()
+                    marked_points_values_df = self._add_str_tag_columns(marked_points_values_df, f.name, values=values)
+                else:
+                    marked_points_values_df = self._add_str_tag_columns(marked_points_values_df, f.name)
             elif typ in (int, float):
                 n_intervals = f.metadata.get("intervals", 3)
-                marked_points_values_df = self._add_interval_tag_columns(marked_points_values_df, f.name, n_intervals)
+                if use_marked_data_tags:
+                    min_max = (marked_data_df[f.name].min(), marked_data_df[f.name].max())
+                    marked_points_values_df = self._add_interval_tag_columns(marked_points_values_df, f.name, n_intervals, min_max=min_max)
+                else:
+                    marked_points_values_df = self._add_interval_tag_columns(marked_points_values_df, f.name, n_intervals)
             elif typ is bool:
                 marked_points_values_df = self._add_bool_tag_columns(marked_points_values_df, f.name)
 
         return marked_points_values_df
-
-    def point_tags(self, ohlcv_df: pd.DataFrame, lower_disp_1, idx: int):
-        ...
 
 
     def mark_data(self):
@@ -490,6 +508,70 @@ class TradingOptimizer:
         end_time = time.time()
         print(f"Elapsed time: {end_time-start_time}s.")
         return marked_points_df
+
+    def mark_data_in_point(self):
+        symbol = "ADAUSDT"
+        ohlcv_df = rd.CURRENCY_DATAS[symbol].ohlcv_df
+        lower_disp_1 = dsp.get_disp_1_lower()
+
+        idx = len(ohlcv_df) - 1
+        point_values = self.point_values(ohlcv_df, lower_disp_1, idx)
+        print(f"Current point values: {point_values}.")
+
+        marked_point = MarkedPoint(
+            index=idx,
+            timestamp=ohlcv_df["timestamp"].iat[idx],
+            values=point_values,
+            sl_price_limit=0.0,
+            sell_price_limit=0.0,
+        )
+
+        marked_points_df_data = []
+        marked_point_dict = dataclasses.asdict(marked_point)
+        marked_point_dict_values = marked_point_dict.pop("values")
+        marked_point_dict.update(marked_point_dict_values)
+        marked_points_df_data.append(marked_point_dict)
+
+        marked_points_df = pd.DataFrame(marked_points_df_data)
+        marked_points_df = self.add_tags_for_point_values(marked_points_df, use_marked_data_tags=True)
+        marked_points_df = marked_points_df.round(5)
+        return marked_points_df
+
+    def check_combs_in_point(self) -> bool:
+        combs: list[CombGrade] = [
+            CombGrade(
+                comb=('#tag_tail_avg_disp_int1', '#tag_trend_extreme_disp_ratio_int2', '#tag_trend_disp_growth_false'),
+                count_=32, sl_count=6, uniformity=0.8125, k=4.333333333333333,
+                verify_grade=CombGrade(comb=None, count_=11, sl_count=1, uniformity=None, k=10.0, verify_grade=None)),
+            CombGrade(comb=('#tag_trend_extreme_disp_count_int2',), count_=21, sl_count=3,
+                      uniformity=0.6190476190476191, k=6.0,
+                      verify_grade=CombGrade(comb=None, count_=10, sl_count=2, uniformity=None, k=4.0,
+                                             verify_grade=None)),
+            CombGrade(
+                comb=('#tag_tail_extreme_disp_ratio_int2', '#tag_tail_avg_disp_int2', '#tag_trend_disp_growth_true'),
+                count_=16, sl_count=3, uniformity=0.6875, k=4.333333333333333,
+                verify_grade=CombGrade(comb=None, count_=6, sl_count=1, uniformity=None, k=5.0, verify_grade=None)),
+            CombGrade(comb=('#tag_tail_extreme_disp_ratio_int1', '#tag_trend_extreme_disp_ratio_int3',
+                            '#tag_trend_min_disp_int3'), count_=12, sl_count=2, uniformity=0.6666666666666667, k=5.0,
+                      verify_grade=CombGrade(comb=None, count_=5, sl_count=1, uniformity=None, k=4.0,
+                                             verify_grade=None)),
+            CombGrade(
+                comb=('#tag_trend_extreme_disp_ratio_int1', '#tag_trend_min_disp_int2', '#tag_trend_disp_growth_true'),
+                count_=7, sl_count=1, uniformity=0.7142857142857143, k=6.0,
+                verify_grade=CombGrade(comb=None, count_=6, sl_count=1, uniformity=None, k=5.0, verify_grade=None)),
+        ]
+
+        prep_combs = [comb_.comb for comb_ in combs]
+
+        marked_data_in_point = self.mark_data_in_point()
+        idx = len(marked_data_in_point) - 1
+        for comb in prep_combs:
+            comb_true = all([bool(marked_data_in_point[comb_tag].iat[idx]) for comb_tag in comb])
+            if comb_true:
+                print(f"!!! Current point match comb: {comb}")
+                return True
+
+        return False
 
     def get_select_combs_mask(self, marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
 
