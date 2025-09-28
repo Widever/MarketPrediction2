@@ -535,6 +535,15 @@ class TradingOptimizer:
         marked_points_df = pd.DataFrame(marked_points_df_data)
         marked_points_df = self.add_tags_for_point_values(marked_points_df, use_marked_data_tags=True)
         marked_points_df = marked_points_df.round(5)
+
+        marked_points_df_tail = marked_points_df.tail(n=5)
+        pd.set_option("display.max_rows", None)
+        pd.set_option("display.max_columns", None)
+
+        print(" ========== Current point marked df:")
+        print(marked_points_df_tail)
+        print()
+
         return marked_points_df
 
     def check_combs_in_point(self) -> bool:

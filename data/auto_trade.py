@@ -1,4 +1,5 @@
 import time
+from decimal import Decimal
 
 import runtime_data as rd
 import trading_optimizer as to
@@ -8,7 +9,8 @@ from data.binance_data_provider import BinanceDataProvider
 from data.currency_data import CurrencyData
 from binance import Client
 
-from data.execute_order import create_test_client, get_open_orders
+from data.execute_order import create_test_client, get_open_orders, get_available_quote_balance, buy_market_and_wait, \
+    place_sell_with_sl_tp, get_current_price
 
 
 class Logger:
@@ -100,15 +102,11 @@ def wait_until_next_interval(interval_minutes: int = 15, min_gap_minutes: int = 
     _file_logger.write(f"Wait {wait_seconds:.0f}s to {next_time}")
     time.sleep(wait_seconds)
 
-def is_ready_to_check_decision(client):
-    open_orders = get_open_orders(client)
-    print(">>>>>>")
-    print(open_orders)
-    return not open_orders
-
 
 def schedule():
     to.DATA_DIR = "optimize_15m_interval"
+    symbol = "ADAUSDT"
+    asset = "ADA"
     interval = Client.KLINE_INTERVAL_15MINUTE
     interval_mins = 15
     min_gap_mins = 1
@@ -118,8 +116,18 @@ def schedule():
 
     while True:
         try:
-            if not is_ready_to_check_decision(client):
-                raise RuntimeError(f"Dont check now, open orders is not empty.")
+            current_price = get_current_price(client, symbol)
+            print(f"//// {current_price=}")
+            _file_logger.write(f"//// {current_price=}")
+
+            usdt_balance = get_available_quote_balance(client, "USDT")
+            asset_balance = get_available_quote_balance(client, asset)
+            print(f">>>> Current balance. usdt: {usdt_balance}, crypto({asset}): {asset_balance}.")
+            _file_logger.write(f">>>> Current balance. usdt: {usdt_balance}, crypto({asset}): {asset_balance}.")
+
+            open_orders = get_open_orders(client)
+            if open_orders:
+                raise RuntimeError(f"++++ Dont check now, open orders is not empty. {len(open_orders)=}.")
 
             print(f"Update data and check combs. now={dt.datetime.now().isoformat()}.")
             _file_logger.write(f"Update data and check combs. now={dt.datetime.now().isoformat()}.")
@@ -132,22 +140,40 @@ def schedule():
             print(f"Data updated and validated in {end_time-start_time}s.")
             _file_logger.write(f"Data updated and validated in {end_time-start_time}s.")
 
-            last_timestamp = int(rd.CURRENCY_DATAS["ADAUSDT"].ohlcv_df["timestamp"].iat[-1])
+            last_timestamp = int(rd.CURRENCY_DATAS[symbol].ohlcv_df["timestamp"].iat[-1])
             last_timestamp_dt = dt.datetime.fromtimestamp(last_timestamp/1000)
             print(f"Last timestamp = {last_timestamp}")
             print(f"Last timestamp dt = {last_timestamp_dt.isoformat()}")
 
             optimizer = to.TradingOptimizer()
             decision = optimizer.check_combs_in_point()
-
             if decision:
-                print("Decision is True. Place order...")
+                print("!!!! Decision is True. Place order...")
+                _file_logger.write("!!!! Decision is True. Place order...")
+
+                # Buy asset
+                buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance))
+                buy_order_avg_price = float(Decimal(buy_crypto_response["cummulativeQuoteQty"]) / Decimal(buy_crypto_response["executedQty"]))
+                print(f"Buy successfully, avg_price: {buy_order_avg_price}.")
+                _file_logger.write(f"Buy successfully, avg_price: {buy_order_avg_price}.")
+
+                # Sell or stop loss
+                asset_balance = get_available_quote_balance(client, asset)
+                sell_crypto = place_sell_with_sl_tp(client, symbol, float(asset_balance), buy_order_avg_price)
+                limit_order = next(x for x in sell_crypto.get("orderReports") if x.get("type") == "LIMIT_MAKER")
+                limit_sell_price = limit_order.get("price")
+                sl_order = next(x for x in sell_crypto.get("orderReports") if x.get("type") == "STOP_LOSS_LIMIT")
+                sl_trigger_price = sl_order.get("stopPrice")
+                sl_limit_price = sl_order.get("price")
+
+                print(f"**** Sell order with stop loss placed successfully. {limit_sell_price=}, {sl_trigger_price=}, {sl_limit_price=}.")
+                _file_logger.write(f"**** Sell order with stop loss placed successfully. {limit_sell_price=}, {sl_trigger_price=}, {sl_limit_price=}.")
             else:
                 raise RuntimeError("Decision False.")
 
         except Exception as e:
-            print(repr(e))
-            _file_logger.write(repr(e))
+            print(f"---- {repr(e)}")
+            _file_logger.write(f"---- {repr(e)}")
             wait_until_next_interval(interval_mins, min_gap_mins)
 
 

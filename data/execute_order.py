@@ -1,13 +1,9 @@
 import time
-import math
-from turtledemo.penrose import start
 
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceRequestException
-from decimal import Decimal, ROUND_DOWN
+from decimal import Decimal
 
-# Параметри: API_KEY, API_SECRET
-# РЕКОМЕНДАЦІЯ: для розробки використовуйте testnet (https://testnet.binance.vision/) або sandbox
 
 def buy_market_and_wait(client: Client,
                         symbol: str,
@@ -16,38 +12,20 @@ def buy_market_and_wait(client: Client,
                         max_wait_seconds: int = 30,
                         poll_interval: float = 0.5,
                         backoff_factor: float = 1.5) -> dict:
-    """
-    Виконує spot market buy і чекає поки ордер завершиться.
-
-    Аргументи:
-      - client: binance.client.Client (заповнений API ключем)
-      - symbol: торговий символ, напр. "BTCUSDT"
-      - quantity: кількість базової валюти (наприклад BTC) для купівлі
-      - quote_order_qty: кількість quote валюти, яку витратити (наприклад USDT). Якщо вказаний, quantity ігнорується.
-      - max_wait_seconds: максимальний час очікування виконання
-      - poll_interval: початковий інтервал між запитами (сек)
-      - backoff_factor: множник для експоненційного backoff
-
-    Повертає: dict з фінальними даними ордеру (як повертає Binance API).
-    Викидає виключення при помилці.
-    """
 
     if (quantity is None) and (quote_order_qty is None):
-        raise ValueError("Потрібно вказати quantity або quote_order_qty")
+        raise ValueError("Specify quantity or quote_order_qty")
 
     try:
-        # Поставити MARKET ордер
+        # Create buy order
         if quote_order_qty is not None:
-            # Купити на суму quote_order_qty (спрацює як "spend X USDT")
             order = client.create_order(
                 symbol=symbol,
                 side=Client.SIDE_BUY,
                 type=Client.ORDER_TYPE_MARKET,
-                quoteOrderQty=str(quote_order_qty)  # рядком інколи надійніше
+                quoteOrderQty=str(quote_order_qty)
             )
         else:
-            # Купити quantity одиниць базової валюти
-            # Зауваж: треба привести quantity до дозволеного precision (stepSize) для символу
             order = client.create_order(
                 symbol=symbol,
                 side=Client.SIDE_BUY,
@@ -55,42 +33,36 @@ def buy_market_and_wait(client: Client,
                 quantity=str(quantity)
             )
     except (BinanceAPIException, BinanceRequestException) as e:
-        # помилка від API (наприклад insufficient balance, bad symbol тощо)
         raise
 
-    # order містить початкову відповідь; якщо market — може повернути частково заповнені дані
     order_id = order.get("orderId") or order.get("clientOrderId")
     if not order_id:
-        # Якщо від API надійшло повне виконання у відповіді — повернути її
         return order
 
-    # Polling: чекати поки статус перейде у кінцевий (FILLED / CANCELED / EXPIRED)
+    # Polling: wait finished status (FILLED / CANCELED / EXPIRED)
     waited = 0.0
     interval = float(poll_interval)
-    terminal_statuses = {"FILLED", "CANCELED", "EXPIRED", "REJECTED"}  # REJECTED можливий
+    terminal_statuses = {"FILLED", "CANCELED", "EXPIRED", "REJECTED"}  # REJECTED possible
     last = order
 
     while waited < max_wait_seconds:
         try:
-            # Отримати статус конкретного ордеру
+            # Get status of specific order
             current = client.get_order(symbol=symbol, orderId=order_id)
         except BinanceAPIException as e:
-            # іноді API повертає помилку, пробуємо ще раз через інтервал
             current = None
 
         if current:
             status = current.get("status")
-            # Якщо ордер повністю виконано або інша кінцева подія — повертаємо
             if status in terminal_statuses:
                 return current
-            # Для market ордерів іноді status == 'PARTIALLY_FILLED' або поле executedQty змінюється
             last = current
 
         time.sleep(interval)
         waited += interval
-        interval = min(interval * backoff_factor, 5.0)  # обмежимо backoff до 5 сек
+        interval = min(interval * backoff_factor, 5.0)
 
-    # таймаут — повертаємо останній відомий стан, або викидаємо помилку
+    # timeout
     return last
 
 def sell_market_and_wait(client: Client,
@@ -99,29 +71,15 @@ def sell_market_and_wait(client: Client,
                          max_wait_seconds: int = 30,
                          poll_interval: float = 0.5,
                          backoff_factor: float = 1.5) -> dict:
-    """
-    Виконує spot market sell і чекає поки ордер завершиться.
-
-    Args:
-        client: binance.client.Client
-        symbol: торговий символ, напр. "BTCUSDT"
-        quantity: кількість базової валюти для продажу (наприклад BTC)
-        max_wait_seconds: максимальний час очікування виконання
-        poll_interval: початковий інтервал між запитами (сек)
-        backoff_factor: множник для експоненційного backoff
-
-    Returns:
-        dict: фінальний стан ордеру
-    """
 
     if quantity < 0.1:
         return {}
 
     if quantity is None:
-        raise ValueError("Потрібно вказати quantity для продажу")
+        raise ValueError("Quantity is required")
 
     try:
-        # Поставити MARKET ордер на продаж
+        # Create sell order
         order = client.create_order(
             symbol=symbol,
             side=Client.SIDE_SELL,
@@ -129,14 +87,13 @@ def sell_market_and_wait(client: Client,
             quantity=str(quantity)
         )
     except (BinanceAPIException, BinanceRequestException) as e:
-        raise RuntimeError(f"Помилка при створенні sell ордеру: {e}")
+        raise
 
     order_id = order.get("orderId") or order.get("clientOrderId")
     if not order_id:
-        # Якщо market ордер повністю виконався і info вже є — повертаємо
         return order
 
-    # Polling статусу ордеру
+    # Polling of status
     waited = 0.0
     interval = float(poll_interval)
     terminal_statuses = {"FILLED", "CANCELED", "EXPIRED", "REJECTED"}
@@ -161,9 +118,6 @@ def sell_market_and_wait(client: Client,
     return last
 
 def place_sell_with_sl_tp(client, symbol: str, quantity, avg_buy_price) -> dict:
-    """
-    Створює OCO ордер (take profit + stop loss) після успішного buy.
-    """
 
     current_price = get_current_price(client, symbol)
     tp_limit_price = avg_buy_price * 1.01
@@ -202,58 +156,30 @@ def place_sell_with_sl_tp(client, symbol: str, quantity, avg_buy_price) -> dict:
 
 
 def get_open_orders(client: Client, symbol: str | None = None) -> list[dict]:
-    """
-    Повертає список відкритих ордерів користувача.
-
-    Args:
-        client: binance.client.Client
-        symbol: (опц.) конкретний торговий символ, напр. "BTCUSDT".
-                Якщо None — поверне всі відкриті ордери для акаунта.
-
-    Returns:
-        list[dict]: список відкритих ордерів (як у Binance API)
-    """
     try:
         if symbol:
             return client.get_open_orders(symbol=symbol)
         else:
             return client.get_open_orders()
     except Exception as e:
-        raise RuntimeError(f"Не вдалося отримати відкриті ордери: {e}")
+        raise
 
 
 def get_available_quote_balance(client: Client, asset: str = "USDT") -> Decimal:
-    """
-    Повертає кількість доступного (free) quote asset на акаунті.
-
-    Args:
-        client: binance.client.Client
-        asset: тикер активу (наприклад "USDT", "BUSD", "USDC")
-
-    Returns:
-        Decimal: доступна кількість asset
-    """
     try:
         balance_info = client.get_asset_balance(asset=asset)
         if not balance_info:
-            raise RuntimeError(f"Актив {asset} не знайдено у балансі акаунта")
+            raise RuntimeError(f"Asset {asset} not found in account.")
         return Decimal(balance_info["free"])
     except Exception as e:
-        raise RuntimeError(f"Не вдалося отримати баланс {asset}: {e}")
+        raise
 
 
 def get_current_price(client: Client, symbol: str) -> float:
-    """
-    Повертає останню ринкову ціну для symbol (наприклад BTCUSDT)
-    """
     ticker = client.get_symbol_ticker(symbol=symbol)
     return float(ticker["price"])
 
 def cancel_all_orders(client: Client, symbol: str) -> list[dict]:
-    """
-    Скасовує всі відкриті ордери для заданого символу (наприклад BTCUSDT).
-    Повертає список скасованих ордерів.
-    """
     if not get_open_orders(client, symbol):
         return []
 
@@ -264,13 +190,6 @@ def cancel_all_orders(client: Client, symbol: str) -> list[dict]:
         raise e
 
 def create_test_client() -> Client:
-    """
-    Повертає тестовий Binance Client (Testnet / sandbox).
-
-    Returns:
-        binance.client.Client
-    """
-
     api_key = "5xGX7qgQZ9FhKtr5TcKYpo7DjWXOPd1MZ1pjwRSaHlSDZPue9bYnRI47AA1GY7MW"
     api_secret = "Xn9jcBisUBUBHAoynkH6xM0p5WnLsXCs3zoY0S3y23jHaKwNpCevmLWvsJWpYFp2"
 
@@ -309,6 +228,7 @@ if __name__ == "__main__":
     # print(open_orders)
     #
     # sell_crypto = place_sell_with_sl_tp(client, "ADAUSDT", float(ada_balance), buy_order_avg_price)
+    # print(sell_crypto)
     #
     # usdt_balance = get_available_quote_balance(client, "USDT")
     # ada_balance = get_available_quote_balance(client, "ADA")
