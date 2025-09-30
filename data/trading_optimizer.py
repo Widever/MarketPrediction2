@@ -16,6 +16,14 @@ from trading_analyzer import PriceTrendInfo, DispTrendInfo, PriceTrend
 
 DATA_DIR: str | None = None
 
+max_trend_len = 50
+flat_trend_limit = 0.005
+sl_k = 0.98
+sell_k = 1.01
+
+min_comb_k = 4
+min_verify_comb_k = 4
+
 @dataclass(slots=True)
 class PointValues:
     in_point_price_ampl: float
@@ -75,8 +83,8 @@ class TradingOptimizer:
         end_low_price = ohlcv_df["low"].iat[for_index]
         end_high_price = ohlcv_df["high"].iat[for_index]
 
-        check_last_n_count = 50
-        flat_limit = 0.009
+        check_last_n_count = max_trend_len
+        flat_limit = flat_trend_limit
 
         lowest_known = end_low_price
         lowest_known_i = for_index
@@ -481,8 +489,8 @@ class TradingOptimizer:
 
             point_values = self.point_values(ohlcv_df, lower_disp_1, idx)
 
-            sl_limit_price = 0.98 * close_price
-            sell_limit_price = 1.01 * close_price
+            sl_limit_price = sl_k * close_price
+            sell_limit_price = sell_k * close_price
 
             new_opened_marked_point = MarkedPoint(
                 index=idx,
@@ -698,13 +706,15 @@ class TradingOptimizer:
 
         comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.count_, reverse=True))
 
+        i = 0
+
         for comb_grade in comb_grades_sorted:
 
-            if comb_grade.k < 4:
+            if comb_grade.k < min_comb_k:
                 continue
-
-            if comb_grade.uniformity < 0.6:
-                continue
+            #
+            # if comb_grade.uniformity < 0.6:
+            #     continue
 
             # Check overlearning
             if selected_combs:
@@ -716,16 +726,22 @@ class TradingOptimizer:
 
             verify_comb_grade = self.grade_comb(verify_comb_df, comb_grade.comb, interval_bins)
 
-            if verify_comb_grade.count_ < 5:
+            # if verify_comb_grade.count_ < 5:
+            #     continue
+            #
+            if verify_comb_grade.k < min_verify_comb_k:
                 continue
 
-            if verify_comb_grade.k < 3.0:
-                continue
+            if i > 1000:
+                break
 
-            print(f"Verify comb grade: {verify_comb_grade}.")
+            i += 1
+
             verify_comb_grade.comb = None
             comb_grade.verify_grade = verify_comb_grade
-            return comb_grade
+            # print(f"Verify comb grade: {verify_comb_grade}.")
+            print(comb_grade)
+            # return comb_grade
 
         raise RuntimeError("Not found comb.")
 
@@ -839,17 +855,21 @@ class TradingOptimizer:
         first.to_csv(f"{DATA_DIR}/marked_points_train.csv", index=False)
         second.to_csv(f"{DATA_DIR}/marked_points_verify.csv", index=False)
 
-
 if __name__ == "__main__":
-    DATA_DIR = "optimize_15m_interval"
-    interval = Client.KLINE_INTERVAL_
-    os.makedirs(DATA_DIR, exist_ok=True)
-
+    interval = Client.KLINE_INTERVAL_5MINUTE
+    # rd.init_runtime_data(interval)
     optimizer = TradingOptimizer()
 
-    # rd.init_runtime_data(interval)
+    flat_trend_limit = 0.005
+    sl_k = 0.98
+    DATA_DIR = f"optimize_5m_interval_{flat_trend_limit}_{sl_k}"
+    min_comb_k = 2.3
+    min_verify_comb_k = 0
+
+    os.makedirs(DATA_DIR, exist_ok=True)
     # opt = optimizer.mark_data()
     # opt = optimizer.split_marked_data()
-    # opt = optimizer.optimal_combs(5)
-    opt = optimizer.super_benchmark()
+
+    opt = optimizer.optimal_combs(5)
+    # opt = optimizer.super_benchmark()
     # print(res)
