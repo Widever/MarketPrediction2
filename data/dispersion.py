@@ -2,8 +2,8 @@ from typing import List
 
 import pandas as pd
 import runtime_data as rd
-# from data.runtime_data import CURRENCY_DATAS
-from data.validation import validate_disp_df
+# from runtime_data import CURRENCY_DATAS
+from validation import validate_disp_df
 
 _DISP_CACHE = {}
 

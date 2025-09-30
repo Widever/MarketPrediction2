@@ -5,11 +5,11 @@ import runtime_data as rd
 import trading_optimizer as to
 import datetime as dt
 
-from data.binance_data_provider import BinanceDataProvider
-from data.currency_data import CurrencyData
+from binance_data_provider import BinanceDataProvider
+from currency_data import CurrencyData
 from binance import Client
 
-from data.execute_order import create_test_client, get_open_orders, get_available_quote_balance, buy_market_and_wait, \
+from execute_order import create_test_client, get_open_orders, get_available_quote_balance, buy_market_and_wait, \
     place_sell_with_sl_tp, get_current_price
 
 

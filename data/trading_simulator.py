@@ -1,8 +1,8 @@
 import numpy
 import pandas as pd
 
-from data.order import Order, ClosedOrder, BuyOrder, SellOrder
-from data.validation import validate_ohlcv_df
+from order import Order, ClosedOrder, BuyOrder, SellOrder
+from validation import validate_ohlcv_df
 
 
 class TradingSimulator:

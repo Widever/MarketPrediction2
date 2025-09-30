@@ -1,7 +1,7 @@
 from typing import TypedDict, Any
 
-from data.binance_data_provider import BinanceDataProvider
-from data.currency_data import CurrencyData
+from binance_data_provider import BinanceDataProvider
+from currency_data import CurrencyData
 from binance import Client
 import datetime as dt
 

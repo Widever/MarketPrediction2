@@ -9,7 +9,7 @@ import trading_analyzer as ta
 import trading_bot as tb
 import chart_builder as chb
 import trading_simulator as ts
-from data.order import ClosedOrder, SellOrder
+from order import ClosedOrder, SellOrder
 
 all_events = defaultdict(list)
 

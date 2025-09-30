@@ -1,8 +1,8 @@
 
 import pandas as pd
 
-from data.binance_data_provider import BinanceDataProvider
-from data.validation import validate_ohlcv_df
+from binance_data_provider import BinanceDataProvider
+from validation import validate_ohlcv_df
 
 
 class CurrencyData:

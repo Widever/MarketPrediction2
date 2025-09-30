@@ -11,7 +11,7 @@ import pandas as pd
 
 import dispersion as dsp
 import runtime_data as rd
-from data.control_panel_core import DecisionEvent, MarketEvent
+from control_panel_core import DecisionEvent, MarketEvent
 
 
 class PriceTrend(IntEnum):

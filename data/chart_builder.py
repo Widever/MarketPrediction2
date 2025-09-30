@@ -13,7 +13,7 @@ import runtime_data as rd
 import trading_bot as tb
 
 import dispersion as dsp
-from data.order import ClosedOrder, BuyOrder, SellOrder
+from order import ClosedOrder, BuyOrder, SellOrder
 
 TOOL_NAME: str = "change"
 CURRENT_LINES: list = []
