@@ -858,11 +858,12 @@ class TradingOptimizer:
 if __name__ == "__main__":
     interval = Client.KLINE_INTERVAL_5MINUTE
     # rd.init_runtime_data(interval)
+    rd.init_runtime_data_from_cache(interval)
     optimizer = TradingOptimizer()
 
-    flat_trend_limit = 0.005
+    flat_trend_limit = 0.015
     sl_k = 0.98
-    DATA_DIR = f"optimize_5m_interval_{flat_trend_limit}_{sl_k}"
+    DATA_DIR = f"optimize_5m_interval_exp"
     min_comb_k = 2.3
     min_verify_comb_k = 0
 
@@ -870,6 +871,6 @@ if __name__ == "__main__":
     # opt = optimizer.mark_data()
     # opt = optimizer.split_marked_data()
 
-    opt = optimizer.optimal_combs(5)
+    # opt = optimizer.optimal_combs(5)
     # opt = optimizer.super_benchmark()
     # print(res)
