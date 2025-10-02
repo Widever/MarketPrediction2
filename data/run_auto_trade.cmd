@@ -1,2 +1,2 @@
-call venv\Scripts\activate.bat
+call ..\venv\Scripts\activate.bat
 python auto_trade.py
