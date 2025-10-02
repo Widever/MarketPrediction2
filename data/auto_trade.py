@@ -104,7 +104,7 @@ def wait_until_next_interval(interval_minutes: int = 15, min_gap_minutes: int = 
 
 
 def schedule():
-    to.DATA_DIR = "optimize_155m_interval"
+    to.DATA_DIR = "optimize_5m_interval"
     symbol = "ADAUSDT"
     asset = "ADA"
     interval = Client.KLINE_INTERVAL_5MINUTE

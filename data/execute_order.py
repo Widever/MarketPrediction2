@@ -120,14 +120,14 @@ def sell_market_and_wait(client: Client,
 def place_sell_with_sl_tp(client, symbol: str, quantity, avg_buy_price) -> dict:
 
     current_price = get_current_price(client, symbol)
-    tp_limit_price = avg_buy_price * 1.01
+    tp_limit_price = avg_buy_price * 1.005
 
     if tp_limit_price <= current_price:
-        tp_limit_price = current_price * 1.01
+        tp_limit_price = current_price * 1.005
 
     tp_limit_price = round(tp_limit_price, 4)
 
-    sl_trigger_price = avg_buy_price * 0.98
+    sl_trigger_price = avg_buy_price * 0.99
 
     if sl_trigger_price >= current_price:
         sl_trigger_price = current_price * 0.98
