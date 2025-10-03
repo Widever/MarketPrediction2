@@ -1,4 +1,5 @@
 import time
+import traceback
 from decimal import Decimal
 
 import runtime_data as rd
@@ -172,7 +173,7 @@ def schedule():
                 raise RuntimeError("Decision False.")
 
         except Exception as e:
-            print(f"---- {repr(e)}")
+            traceback.print_exception(e)
             _file_logger.write(f"---- {repr(e)}")
             wait_until_next_interval(interval_mins, min_gap_mins)
 

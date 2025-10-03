@@ -17,10 +17,10 @@ from trading_analyzer import PriceTrendInfo, DispTrendInfo, PriceTrend
 DATA_DIR: str | None = None
 
 max_trend_len = 50
-flat_trend_limit = 0.005
-sl_k = 0.98
-sell_k = 1.01
-point_value_intervals_n = 3
+flat_trend_limit = 0.02
+sl_k = 0.99
+sell_k = 1.005
+point_value_intervals_n = 4
 
 min_comb_k = 4
 min_comb_count = 20
