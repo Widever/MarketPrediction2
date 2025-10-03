@@ -1,3 +1,4 @@
+import os
 import time
 import traceback
 from decimal import Decimal
@@ -115,6 +116,9 @@ def schedule():
 
     wait_until_next_interval(interval_mins, min_gap_mins)
 
+    online_ohlcv_dir = f"online_data_{interval}"
+    os.makedirs(online_ohlcv_dir, exist_ok=True)
+
     while True:
         try:
             current_price = get_current_price(client, symbol)
@@ -140,6 +144,21 @@ def schedule():
 
             print(f"Data updated and validated in {end_time-start_time}s.")
             _file_logger.write(f"Data updated and validated in {end_time-start_time}s.")
+
+            # Add online ohlcv data
+            header_line = "timestamp,open,high,low,close,volume"
+            for symbol, currency_data in rd.CURRENCY_DATAS.items():
+                file_path = os.path.join(online_ohlcv_dir, f"{symbol}.csv")
+
+                file_exists = os.path.exists(file_path)
+                is_empty = not file_exists or os.path.getsize(file_path) == 0
+                currency_df = currency_data.ohlcv_df
+                with open(file_path, "a", encoding="utf-8") as f:
+                    if is_empty:
+                        f.write(header_line + "\n")
+
+                    data_line = f"{currency_df["timestamp"].iat[-1]},{currency_df["open"].iat[-1]},{currency_df["high"].iat[-1]},{currency_df["low"].iat[-1]},{currency_df["close"].iat[-1]},{currency_df["volume"].iat[-1]}"
+                    f.write(data_line + "\n")
 
             last_timestamp = int(rd.CURRENCY_DATAS[symbol].ohlcv_df["timestamp"].iat[-1])
             last_timestamp_dt = dt.datetime.fromtimestamp(last_timestamp/1000)
