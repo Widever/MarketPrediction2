@@ -2,3 +2,4 @@ numpy
 pandas
 mplfinance
 python-binance
+matplotlib
