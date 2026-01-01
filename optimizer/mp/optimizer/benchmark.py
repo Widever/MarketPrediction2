@@ -5,7 +5,7 @@ import pandas as pd
 from mp.optimizer.comb import CombGrade, get_select_combs_mask
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(data_dir, f"optimize_main_dir")
+data_dir = os.path.join(data_dir, f"optimize_with_online_data")
 
 
 def super_benchmark():

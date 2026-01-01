@@ -32,9 +32,13 @@ CURRENCY_DATA_DICT = {}
 DEVIATION_K_DICT = {}
 AMPL_RATIO_DICT = {}
 
-def init_currency_data_dict(interval):
-    lower_bound_timestamp = int(dt.datetime(2025, 1, 5).timestamp() * 1000)
-    upper_bound_timestamp = int(dt.datetime.now().timestamp() * 1000)
+def init_currency_data_dict(interval, lower_bound_timestamp=None, upper_bound_timestamp=None, save_to_file=True):
+
+    if lower_bound_timestamp is None:
+        lower_bound_timestamp = int(dt.datetime(2025, 1, 5).timestamp() * 1000)
+    if upper_bound_timestamp is None:
+        upper_bound_timestamp = int(dt.datetime.now().timestamp() * 1000)
+
     binance_data_provider = BinanceDataProvider(interval)
 
     cache_dir = os.path.dirname(os.path.abspath(__file__))
@@ -50,8 +54,9 @@ def init_currency_data_dict(interval):
         currency_data.upper_bound_timestamp = upper_bound_timestamp
         CURRENCY_DATA_DICT[symbol] = currency_data
         currency_data.update()
-        file_path = os.path.join(cache_dir, f"{symbol}.csv")
-        currency_data.ohlcv_df.to_csv(file_path, index=False)
+        if save_to_file:
+            file_path = os.path.join(cache_dir, f"{symbol}.csv")
+            currency_data.ohlcv_df.to_csv(file_path, index=False)
 
 
 def init_currency_data_dict_from_cache(interval):
