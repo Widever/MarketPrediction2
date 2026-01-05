@@ -1,14 +1,14 @@
+import dataclasses
 import itertools
 import os
 import time
 from dataclasses import dataclass
-from typing import Self, Any
-from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import cpu_count
+from typing import Self
 
 import numpy as np
 import pandas as pd
 
+from mp.optimizer.mark import PointValues
 from mp.optimizer.parallel_grade_comb import grade_combs_parallel
 
 min_comb_k = 2
@@ -205,11 +205,29 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
     print(f"Full df len: {len(train_marked_points_df)}")
 
     tags = [x for x in train_marked_points_df.columns if x.startswith("#tag_")]
-    combinations = list(itertools.combinations(tags, 1))
-    combinations += list(itertools.combinations(tags, 2))
-    combinations += list(itertools.combinations(tags, 3))
-    combinations += list(itertools.combinations(tags, 4))
-    combinations += list(itertools.combinations(tags, 5))
+    # combinations = list(itertools.combinations(tags, 1))
+    # combinations += list(itertools.combinations(tags, 2))
+    # combinations += list(itertools.combinations(tags, 3))
+    # combinations += list(itertools.combinations(tags, 4))
+    # combinations += list(itertools.combinations(tags, 5))
+
+    dict_of_field_tags = {}
+    f_names = [f.name for f in dataclasses.fields(PointValues)]
+    f_names = [x for x in f_names if x not in ("btc_price_up", "all_same_price_dir", "ada_price_up")]
+
+    for f_name in f_names:
+        field_tags = [x for x in tags if x.startswith(f"#tag_{f_name}")]
+        dict_of_field_tags[f_name] = field_tags
+
+    field_combs = []
+    field_combs += list(itertools.combinations(f_names, 5))
+    field_combs += list(itertools.combinations(f_names, 6))
+
+    combinations = []
+    for field_comb in field_combs:
+        list_of_field_tags = [dict_of_field_tags[f] for f in field_comb]
+        combinations += list(itertools.product(*list_of_field_tags))
+
     combs: list[tuple[str, ...]] = combinations
 
     print(f"All combs len: {len(combs)}")
