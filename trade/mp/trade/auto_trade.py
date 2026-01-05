@@ -10,7 +10,7 @@ import mp.optimizer.init_data as data
 from binance import Client
 
 from mp.trade.execute_order import create_test_client, get_open_orders, get_available_quote_balance, buy_market_and_wait, \
-    place_sell_with_sl_tp, get_current_price
+    place_sell_all_with_sl_tp, get_current_price
 
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
@@ -164,8 +164,7 @@ def schedule():
                 _file_logger.write(f"Buy successfully, avg_price: {buy_order_avg_price}.")
 
                 # Sell or stop loss
-                asset_balance = get_available_quote_balance(client, asset)
-                sell_crypto = place_sell_with_sl_tp(client, symbol, float(asset_balance), buy_order_avg_price)
+                sell_crypto = place_sell_all_with_sl_tp(client, symbol, buy_order_avg_price)
                 limit_order = next(x for x in sell_crypto.get("orderReports") if x.get("type") == "LIMIT_MAKER")
                 limit_sell_price = limit_order.get("price")
                 sl_order = next(x for x in sell_crypto.get("orderReports") if x.get("type") == "STOP_LOSS_LIMIT")

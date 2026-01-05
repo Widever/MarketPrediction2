@@ -67,7 +67,8 @@ def plot_series_histogram(
 
 if __name__ == '__main__':
 
-    data.init_currency_data_dict_from_cache("5m")
+    # data.init_currency_data_dict_from_cache("5m")
+    data.init_currency_data_dict("5m")
     data.init_deviation_k_dict()
     data.init_ampl_ratio_dict()
 

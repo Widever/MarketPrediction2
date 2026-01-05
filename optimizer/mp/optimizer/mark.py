@@ -12,7 +12,7 @@ import pandas as pd
 import mp.optimizer.init_data as data
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(data_dir, f"optimize_with_online_data")
+data_dir = os.path.join(data_dir, f"optimize_compare_with_online")
 
 max_trend_len = 50
 flat_trend_limit = 0.02
@@ -253,12 +253,12 @@ def add_tags_for_point_values(marked_points_values_df: pd.DataFrame) -> pd.DataF
 
     return marked_points_values_df
 
-def _interval_str_value(property_name: str, intervals: list[float], value: float) -> str:
+def _interval_str_value(intervals: list[float], value: float) -> str:
     for bound in intervals:
         if value < bound:
-            return f"{property_name}_lt_{bound}"
+            return f"lt_{bound}"
 
-    return f"{property_name}_gt_{intervals[-1]}"
+    return f"gt_{intervals[-1]}"
 
 def _log_return_ratio(symbol_1: str, symbol_2: str, timestamp: int) -> float:
     df = data.DEVIATION_K_DICT[(symbol_1, symbol_2)]
@@ -278,27 +278,22 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
 
     return PointValues(
         btc_eth_log_return_ratio=_interval_str_value(
-            "btc_eth_log_return_ratio",
             [0.0, 0.5, 1.1],
             _log_return_ratio("BTCUSDT", "ETHUSDT", timestamp)
         ),
         btc_ada_log_return_ratio=_interval_str_value(
-            "btc_ada_log_return_ratio",
             [0.0, 0.25, 0.62],
             _log_return_ratio("BTCUSDT", "ADAUSDT", timestamp)
         ),
         btc_doge_log_return_ratio=_interval_str_value(
-            "btc_doge_log_return_ratio",
             [-0.2, 0.2, 0.6],
             _log_return_ratio("BTCUSDT", "DOGEUSDT", timestamp)
         ),
         eth_ada_log_return_ratio=_interval_str_value(
-            "eth_ada_log_return_ratio",
             [0.0, 0.4, 0.8],
             _log_return_ratio("ETHUSDT", "ADAUSDT", timestamp)
         ),
         eth_doge_log_return_ratio=_interval_str_value(
-            "eth_doge_log_return_ratio",
             [0.25, 0.75, 1.0],
             _log_return_ratio("ETHUSDT", "DOGEUSDT", timestamp)
         ),
@@ -307,27 +302,22 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         all_same_price_dir=get_price_trend("ADAUSDT", timestamp).trend_kind ==
                            get_price_trend("BTCUSDT", timestamp).trend_kind,
         btc_eth_amp_ratio=_interval_str_value(
-            "btc_eth_amp_ratio",
             [0.39, 0.52, 0.65],
             _ampl_ratio("BTCUSDT", "ETHUSDT", timestamp)
         ),
         btc_ada_amp_ratio=_interval_str_value(
-            "btc_ada_amp_ratio",
             [0.3, 0.48, 0.6],
             _ampl_ratio("BTCUSDT", "ADAUSDT", timestamp)
         ),
         btc_doge_amp_ratio=_interval_str_value(
-            "btc_doge_amp_ratio",
             [0.25, 0.36, 0.54],
             _ampl_ratio("BTCUSDT", "DOGEUSDT", timestamp)
         ),
         eth_ada_amp_ratio=_interval_str_value(
-            "eth_ada_amp_ratio",
             [0.48, 0.67, 0.9],
             _ampl_ratio("ETHUSDT", "ADAUSDT", timestamp)
         ),
         eth_doge_amp_ratio=_interval_str_value(
-            "eth_doge_amp_ratio",
             [0.5, 0.7, 0.87],
             _ampl_ratio("ETHUSDT", "DOGEUSDT", timestamp)
         ),
