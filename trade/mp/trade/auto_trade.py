@@ -158,7 +158,7 @@ def schedule():
 
                 # Buy asset
                 usdt_balance = get_available_quote_balance(client, "USDT")
-                buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance))
+                buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance)*0.8)
                 buy_order_avg_price = float(Decimal(buy_crypto_response["cummulativeQuoteQty"]) / Decimal(buy_crypto_response["executedQty"]))
                 print(f"Buy successfully, avg_price: {buy_order_avg_price}.")
                 _file_logger.write(f"Buy successfully, avg_price: {buy_order_avg_price}.")

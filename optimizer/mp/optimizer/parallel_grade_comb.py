@@ -25,7 +25,7 @@ def comb_grade_worker(comb):
 
 def grade_combs_parallel(all_combs):
 
-    workers = cpu_count() - 1  # або cpu_count() - 1
+    workers = cpu_count() - 2  # або cpu_count() - 1
     # workers = 1  # або cpu_count() - 1
     total = len(all_combs)
 

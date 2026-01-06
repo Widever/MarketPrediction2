@@ -3,7 +3,41 @@ import time
 from binance.client import Client
 from binance.exceptions import BinanceAPIException, BinanceRequestException
 from decimal import Decimal
+from decimal import ROUND_DOWN
 
+
+def precision_from_step(step: str) -> int:
+    step = step.rstrip("0")
+    if "." not in step:
+        return 0
+    return len(step.split(".")[1])
+
+def quantize(value, precision: int) -> str:
+    q = Decimal("1." + "0" * precision)
+    return str(Decimal(value).quantize(q, rounding=ROUND_DOWN))
+
+def get_symbol_rules(client: Client, symbol: str) -> dict:
+    info = client.get_symbol_info(symbol)
+
+    rules = {
+        "lot_step": None,
+        "quote_step": None,
+        "min_qty": None,
+        "min_notional": None,
+    }
+
+    for f in info["filters"]:
+        if f["filterType"] == "LOT_SIZE":
+            rules["lot_step"] = f["stepSize"]
+            rules["min_qty"] = f["minQty"]
+
+        elif f["filterType"] == "MARKET_LOT_SIZE":
+            rules["quote_step"] = f["stepSize"]
+
+        elif f["filterType"] in ("MIN_NOTIONAL", "NOTIONAL"):
+            rules["min_notional"] = f["minNotional"]
+
+    return rules
 
 def buy_market_and_wait(client: Client,
                         symbol: str,
@@ -16,14 +50,19 @@ def buy_market_and_wait(client: Client,
     if (quantity is None) and (quote_order_qty is None):
         raise ValueError("Specify quantity or quote_order_qty")
 
+    rules = get_symbol_rules(client, symbol)
+    precision = precision_from_step(rules["quote_step"])
+
     try:
         # Create buy order
         if quote_order_qty is not None:
+
+            quote_order_qty = quantize(quote_order_qty, precision)
             order = client.create_order(
                 symbol=symbol,
                 side=Client.SIDE_BUY,
                 type=Client.ORDER_TYPE_MARKET,
-                quoteOrderQty=str(quote_order_qty)
+                quoteOrderQty=quote_order_qty
             )
         else:
             order = client.create_order(
@@ -117,7 +156,7 @@ def sell_market_and_wait(client: Client,
 
     return last
 
-def _get_sell_all_qty(client: Client, symbol: str) -> float:
+def _get_sell_all_qty(client: Client, symbol: str) -> str:
     # 1. Отримуємо інформацію по символу
     info = client.get_symbol_info(symbol)
 
@@ -143,7 +182,7 @@ def _get_sell_all_qty(client: Client, symbol: str) -> float:
         raise RuntimeError(f"No free balance for {base_asset}")
 
     # 3. Залишаємо 1% запасу + округляємо по stepSize
-    qty = (free_qty * Decimal("0.99") // step_size) * step_size
+    qty = (free_qty * Decimal("0.998") // step_size) * step_size
 
     if qty < min_qty:
         raise RuntimeError(
@@ -157,6 +196,11 @@ def _get_sell_all_qty(client: Client, symbol: str) -> float:
         raise RuntimeError(
             f"Notional {qty * price} < minNotional {min_notional} for {symbol}"
         )
+
+    rules = get_symbol_rules(client, symbol)
+    precision = precision_from_step(rules["quote_step"])
+
+    qty = quantize(qty, precision)
 
     return qty
 
@@ -172,7 +216,7 @@ def order_sell_all_available(client: Client, symbol: str):
         symbol=symbol,
         side=Client.SIDE_SELL,
         type=Client.ORDER_TYPE_MARKET,
-        quantity=str(qty),
+        quantity=qty,
     )
 
 def sell_all_market_and_wait(
@@ -312,7 +356,7 @@ def decision(client):
 
     # Buy asset
     usdt_balance = get_available_quote_balance(client, "USDT")
-    usdt_balance = 15.0
+    usdt_balance = float(usdt_balance)*0.8
     buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance))
     buy_order_avg_price = float(
         Decimal(buy_crypto_response["cummulativeQuoteQty"]) / Decimal(buy_crypto_response["executedQty"]))
@@ -332,7 +376,7 @@ if __name__ == "__main__":
     # decision(client)
 
     # cancel_all_orders(client, "ADAUSDT")
-    sell_crypto = sell_all_market_and_wait(client, "ADAUSDT")
+    # sell_crypto = sell_all_market_and_wait(client, "ADAUSDT")
     # sell_crypto = sell_market_and_wait(client, "USDCUSDT", quantity=100)
 
     usdt_balance = get_available_quote_balance(client, "USDT")

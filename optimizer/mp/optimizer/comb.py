@@ -213,15 +213,15 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
 
     dict_of_field_tags = {}
     f_names = [f.name for f in dataclasses.fields(PointValues)]
-    f_names = [x for x in f_names if x not in ("btc_price_up", "all_same_price_dir", "ada_price_up")]
+    # f_names = [x for x in f_names if x not in ("btc_price_up", "all_same_price_dir", "ada_price_up")]
 
     for f_name in f_names:
         field_tags = [x for x in tags if x.startswith(f"#tag_{f_name}")]
         dict_of_field_tags[f_name] = field_tags
 
     field_combs = []
+    field_combs += list(itertools.combinations(f_names, 4))
     field_combs += list(itertools.combinations(f_names, 5))
-    field_combs += list(itertools.combinations(f_names, 6))
 
     combinations = []
     for field_comb in field_combs:

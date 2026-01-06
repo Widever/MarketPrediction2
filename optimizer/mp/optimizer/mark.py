@@ -12,7 +12,7 @@ import pandas as pd
 import mp.optimizer.init_data as data
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(data_dir, f"optimize_compare_with_online")
+data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 max_trend_len = 50
 flat_trend_limit = 0.02
