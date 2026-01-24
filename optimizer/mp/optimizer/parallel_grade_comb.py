@@ -1,6 +1,7 @@
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from multiprocessing import cpu_count
 
 import pandas as pd
@@ -12,29 +13,37 @@ data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 _train_df = None
 
-def comb_grade_worker(comb):
+def comb_grade_worker(comb, selected_combs):
     global _train_df
 
     if _train_df is None:
         _train_df = pd.read_csv(f"{data_dir}/marked_points_train.csv")
+
+        if selected_combs:
+            exclude_mask = comb_engine.get_exclude_combs_mask(_train_df,
+                                                              [selected_comb.comb for selected_comb in selected_combs])
+            _train_df = _train_df[exclude_mask].reset_index(drop=True)
 
     select_mask = comb_engine.get_select_combs_mask(_train_df, [comb])
     comb_df = _train_df[select_mask]
 
     return comb_engine.grade_comb(comb_df, comb)
 
-def grade_combs_parallel(all_combs):
-
-    workers = cpu_count() - 2  # або cpu_count() - 1
-    # workers = 1  # або cpu_count() - 1
+def grade_combs_parallel(all_combs, selected_combs):
+    global _train_df
+    # workers = cpu_count() - 2  # або cpu_count() - 1
+    workers = 1  # або cpu_count() - 1
     total = len(all_combs)
 
     report_every = 10_000
     processed = 0
     start = time.time()
     grades = []
+
+    worker = partial(comb_grade_worker, selected_combs=selected_combs)
+
     with ProcessPoolExecutor(max_workers=workers) as executor:
-        for v in executor.map(comb_grade_worker, all_combs, chunksize=10_000):
+        for v in executor.map(worker, all_combs, chunksize=10_000):
             grades.append(v)
             processed += 1
 
@@ -50,5 +59,7 @@ def grade_combs_parallel(all_combs):
                     f"{rate:,.0f} items/s | "
                     f"ETA ~ {eta / 60:.1f} min"
                 )
+
+    _train_df = None
 
     return grades
