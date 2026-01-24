@@ -1,5 +1,6 @@
 import dataclasses
 import itertools
+import math
 import os
 import time
 from dataclasses import dataclass
@@ -143,7 +144,7 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
     #     comb_grade = grade_comb(comb_df, comb, interval_bins)
     #     comb_grades.append(comb_grade)
 
-    comb_grades = grade_combs_parallel(all_combs)
+    comb_grades = grade_combs_parallel(all_combs, selected_combs)
 
     print("Grading finished. Sorting comb_grades...")
     comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.k, reverse=True))
@@ -155,8 +156,14 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
         # if comb_grade.k < min_comb_k:
         #     continue
         #
-        if comb_grade.count_ < min_comb_count:
+
+        x = len(comb_grade.comb)
+        min_comb_count_ = 200 * math.exp(-0.4 * x) + 0
+
+        if comb_grade.count_ < min_comb_count_:
             continue
+
+        return comb_grade
 
         #
         # if comb_grade.uniformity < 0.6:
@@ -194,6 +201,19 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
 
     raise RuntimeError("Not found comb.")
 
+def tag_to_field(tag: str) -> str:
+    f_names = [f.name for f in dataclasses.fields(PointValues)]
+
+    value = tag.removeprefix("#tag_")
+    parts = value.split("_")
+
+    res = []
+    for part in parts:
+        res.append(part)
+        if (joined_res := "_".join(res)) in f_names:
+            return joined_res
+
+    raise RuntimeError(f"Tag {tag} is unknown field.")
 
 def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
     full_time_start = time.time()
@@ -211,24 +231,25 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
     # combinations += list(itertools.combinations(tags, 4))
     # combinations += list(itertools.combinations(tags, 5))
 
-    dict_of_field_tags = {}
-    f_names = [f.name for f in dataclasses.fields(PointValues)]
+    # dict_of_field_tags = {}
+    # f_names = [f.name for f in dataclasses.fields(PointValues)]
     # f_names = [x for x in f_names if x not in ("btc_price_up", "all_same_price_dir", "ada_price_up")]
 
-    for f_name in f_names:
-        field_tags = [x for x in tags if x.startswith(f"#tag_{f_name}")]
-        dict_of_field_tags[f_name] = field_tags
+    # for f_name in f_names:
+    #     field_tags = [x for x in tags if x.startswith(f"#tag_{f_name}")]
+    #     dict_of_field_tags[f_name] = field_tags
+    #
+    # field_combs = []
+    # field_combs += list(itertools.combinations(f_names, 4))
+    # field_combs += list(itertools.combinations(f_names, 5))
+    #
+    # combinations = []
+    # for field_comb in field_combs:
+    #     list_of_field_tags = [dict_of_field_tags[f] for f in field_comb]
+    #     combinations += list(itertools.product(*list_of_field_tags))
 
-    field_combs = []
-    field_combs += list(itertools.combinations(f_names, 4))
-    field_combs += list(itertools.combinations(f_names, 5))
-
-    combinations = []
-    for field_comb in field_combs:
-        list_of_field_tags = [dict_of_field_tags[f] for f in field_comb]
-        combinations += list(itertools.product(*list_of_field_tags))
-
-    combs: list[tuple[str, ...]] = combinations
+    start_combs: list[tuple[str, ...]] = list(itertools.combinations(tags, 2))
+    combs: list[tuple[str, ...]] = start_combs
 
     print(f"All combs len: {len(combs)}")
 
@@ -245,7 +266,17 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
 
             comb_grade = choose_comb(train_marked_points_df, verify_marked_points_df, combs, selected_combs,
                                           interval_bins)
+
+            if len(comb_grade.comb) < 8:
+
+                filled_fields = {tag_to_field(x) for x in comb_grade.comb}
+                remaining_tags = [x for x in tags if tag_to_field(x) not in filled_fields]
+                new_combs = [(*comb_grade.comb, x) for x in remaining_tags]
+                combs = new_combs
+                continue
+
             selected_combs.append(comb_grade)
+            combs = start_combs
 
             print("Chosen comb:")
             print(comb_grade)

@@ -23,9 +23,14 @@ deviation_pairs = (
     ("BTCUSDT", "DOGEUSDT"),
     ("BTCUSDT", "ADAUSDT"),
     ("BTCUSDT", "AVAXUSDT"),
+    ("BTCUSDT", "XRPUSDT"),
     ("ETHUSDT", "DOGEUSDT"),
     ("ETHUSDT", "AVAXUSDT"),
     ("ETHUSDT", "ADAUSDT"),
+    ("ETHUSDT", "XRPUSDT"),
+    ("DOGEUSDT", "ADAUSDT"),
+    ("DOGEUSDT", "XRPUSDT"),
+    ("DOGEUSDT", "SUIUSDT"),
 )
 
 CURRENCY_DATA_DICT = {}

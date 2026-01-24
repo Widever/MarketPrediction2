@@ -1,7 +1,7 @@
 import dataclasses
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, auto
 from statistics import mean
 from typing import get_origin, get_args
@@ -22,19 +22,29 @@ sell_k = 1.01
 
 @dataclass(slots=True)
 class PointValues:
-    btc_eth_log_return_ratio: str
-    btc_ada_log_return_ratio: str
-    btc_doge_log_return_ratio: str
-    eth_ada_log_return_ratio: str
-    eth_doge_log_return_ratio: str
+    btc_eth_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.5, 1.1]})
+    btc_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.25, 0.62]})
+    btc_doge_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6]})
+    btc_xrp_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6]})
+    eth_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
+    eth_doge_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0]})
+    eth_xrp_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0]})
+    doge_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
+    doge_sui_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
+    doge_xrp_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
     ada_price_up: bool
     btc_price_up: bool
     all_same_price_dir: bool
-    btc_eth_amp_ratio: str
-    btc_ada_amp_ratio: str
-    btc_doge_amp_ratio: str
-    eth_ada_amp_ratio: str
-    eth_doge_amp_ratio: str
+    btc_eth_amp_ratio: float = field(metadata={"intervals": [0.39, 0.52, 0.65]})
+    btc_ada_amp_ratio: float = field(metadata={"intervals": [0.3, 0.48, 0.6]})
+    btc_doge_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54]})
+    btc_xrp_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54]})
+    eth_ada_amp_ratio: float = field(metadata={"intervals": [0.48, 0.67, 0.9]})
+    eth_doge_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
+    eth_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
+    doge_ada_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
+    doge_sui_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
+    doge_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
 
 @dataclass(slots=True)
 class MarkedPoint:
@@ -194,26 +204,17 @@ def get_price_trend(symbol: str, timestamp: int) -> PriceTrendInfo:
         trend_ohlcva=trend_ohlcva
     )
 
-def _add_interval_tag_columns(df: pd.DataFrame, col: str, n_intervals: int, min_max = None) -> pd.DataFrame:
-    # Get min and max
-    if min_max is None:
-        min_val, max_val = df[col].min(), df[col].max()
-    else:
-        min_val, max_val = min_max
+def _add_interval_tag_columns(df: pd.DataFrame, col: str, intervals: list[float]) -> pd.DataFrame:
 
-    # Build intervals
-    bins = np.linspace(min_val, max_val, n_intervals + 1)
+    shift_interval = 0.0
+    for i, gt_v in enumerate(intervals):
 
-    for i in range(n_intervals):
-        left, right = bins[i], bins[i + 1]
+        gt_v += shift_interval
 
-        # Last interval include right
-        if i == n_intervals - 1:
-            mask = (df[col] >= left)
-        else:
-            mask = (df[col] >= left) & (df[col] < right)
+        if i == 0:
+            df[f"#tag_{col}_lt_{gt_v}"] = df[col] < gt_v
 
-        df[f"#tag_{col}_int{i + 1}"] = mask
+        df[f"#tag_{col}_gt_{gt_v}"] = df[col] >= gt_v
 
     return df
 
@@ -246,8 +247,8 @@ def add_tags_for_point_values(marked_points_values_df: pd.DataFrame) -> pd.DataF
         if typ is str:
                 marked_points_values_df = _add_str_tag_columns(marked_points_values_df, f.name)
         elif typ in (int, float):
-            n_intervals = f.metadata.get("intervals", 3)
-            marked_points_values_df = _add_interval_tag_columns(marked_points_values_df, f.name, n_intervals)
+            intervals = f.metadata.get("intervals", [0.0])
+            marked_points_values_df = _add_interval_tag_columns(marked_points_values_df, f.name, intervals)
         elif typ is bool:
             marked_points_values_df = _add_bool_tag_columns(marked_points_values_df, f.name)
 
@@ -277,50 +278,30 @@ def _ampl_ratio(symbol_1: str, symbol_2: str, timestamp: int) -> float:
 def point_values(symbol: str, timestamp: int) -> PointValues:
 
     return PointValues(
-        btc_eth_log_return_ratio=_interval_str_value(
-            [0.0, 0.5, 1.1],
-            _log_return_ratio("BTCUSDT", "ETHUSDT", timestamp)
-        ),
-        btc_ada_log_return_ratio=_interval_str_value(
-            [0.0, 0.25, 0.62],
-            _log_return_ratio("BTCUSDT", "ADAUSDT", timestamp)
-        ),
-        btc_doge_log_return_ratio=_interval_str_value(
-            [-0.2, 0.2, 0.6],
-            _log_return_ratio("BTCUSDT", "DOGEUSDT", timestamp)
-        ),
-        eth_ada_log_return_ratio=_interval_str_value(
-            [0.0, 0.4, 0.8],
-            _log_return_ratio("ETHUSDT", "ADAUSDT", timestamp)
-        ),
-        eth_doge_log_return_ratio=_interval_str_value(
-            [0.25, 0.75, 1.0],
-            _log_return_ratio("ETHUSDT", "DOGEUSDT", timestamp)
-        ),
+        btc_eth_log_return_ratio=_log_return_ratio("BTCUSDT", "ETHUSDT", timestamp),
+        btc_ada_log_return_ratio=_log_return_ratio("BTCUSDT", "ADAUSDT", timestamp),
+        btc_doge_log_return_ratio=_log_return_ratio("BTCUSDT", "DOGEUSDT", timestamp),
+        btc_xrp_log_return_ratio=_log_return_ratio("BTCUSDT", "XRPUSDT", timestamp),
+        eth_ada_log_return_ratio=_log_return_ratio("ETHUSDT", "ADAUSDT", timestamp),
+        eth_doge_log_return_ratio=_log_return_ratio("ETHUSDT", "DOGEUSDT", timestamp),
+        eth_xrp_log_return_ratio=_log_return_ratio("ETHUSDT", "XRPUSDT", timestamp),
+        doge_ada_log_return_ratio=_log_return_ratio("DOGEUSDT", "ADAUSDT", timestamp),
+        doge_xrp_log_return_ratio=_log_return_ratio("DOGEUSDT", "XRPUSDT", timestamp),
+        doge_sui_log_return_ratio=_log_return_ratio("DOGEUSDT", "SUIUSDT", timestamp),
         ada_price_up=get_price_trend("ADAUSDT", timestamp).trend_kind == PriceTrend.UP,
         btc_price_up=get_price_trend("BTCUSDT", timestamp).trend_kind == PriceTrend.UP,
         all_same_price_dir=get_price_trend("ADAUSDT", timestamp).trend_kind ==
                            get_price_trend("BTCUSDT", timestamp).trend_kind,
-        btc_eth_amp_ratio=_interval_str_value(
-            [0.39, 0.52, 0.65],
-            _ampl_ratio("BTCUSDT", "ETHUSDT", timestamp)
-        ),
-        btc_ada_amp_ratio=_interval_str_value(
-            [0.3, 0.48, 0.6],
-            _ampl_ratio("BTCUSDT", "ADAUSDT", timestamp)
-        ),
-        btc_doge_amp_ratio=_interval_str_value(
-            [0.25, 0.36, 0.54],
-            _ampl_ratio("BTCUSDT", "DOGEUSDT", timestamp)
-        ),
-        eth_ada_amp_ratio=_interval_str_value(
-            [0.48, 0.67, 0.9],
-            _ampl_ratio("ETHUSDT", "ADAUSDT", timestamp)
-        ),
-        eth_doge_amp_ratio=_interval_str_value(
-            [0.5, 0.7, 0.87],
-            _ampl_ratio("ETHUSDT", "DOGEUSDT", timestamp)
-        ),
+        btc_eth_amp_ratio=_ampl_ratio("BTCUSDT", "ETHUSDT", timestamp),
+        btc_ada_amp_ratio=_ampl_ratio("BTCUSDT", "ADAUSDT", timestamp),
+        btc_doge_amp_ratio=_ampl_ratio("BTCUSDT", "DOGEUSDT", timestamp),
+        btc_xrp_amp_ratio=_ampl_ratio("BTCUSDT", "XRPUSDT", timestamp),
+        eth_ada_amp_ratio=_ampl_ratio("ETHUSDT", "ADAUSDT", timestamp),
+        eth_doge_amp_ratio=_ampl_ratio("ETHUSDT", "DOGEUSDT", timestamp),
+        eth_xrp_amp_ratio=_ampl_ratio("ETHUSDT", "XRPUSDT", timestamp),
+        doge_ada_amp_ratio=_ampl_ratio("DOGEUSDT", "ADAUSDT", timestamp),
+        doge_xrp_amp_ratio=_ampl_ratio("DOGEUSDT", "XRPUSDT", timestamp),
+        doge_sui_amp_ratio=_ampl_ratio("DOGEUSDT", "SUIUSDT", timestamp),
     )
 
 def mark_data():
