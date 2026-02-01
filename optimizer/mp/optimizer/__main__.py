@@ -72,9 +72,28 @@ if __name__ == '__main__':
     data.init_deviation_k_dict()
     data.init_ampl_ratio_dict()
 
+    # data.init_trend_dict()
+    data.init_trend_dict_from_cache()
+
     check_currency_data_dict()
     check_deviation_k_dict()
     check_ampl_ratio_dict()
+
+    # series = pd.Series(mark._trend_value_ratio("DOGEUSDT", "XRPUSDT", timestamp) for timestamp in data.CURRENCY_DATA_DICT["BTCUSDT"].ohlcv_df["timestamp"])
+    # pd.set_option("display.max_rows", 500)
+    # print(series.sample(n=100, random_state=42))
+    # print(series.min(), series.max())
+    # def f_tren_value(symbol):
+    #
+    #     def f(x):
+    #         return mark.get_price_trend(symbol, x).trend_value
+    #
+    #     return f
+    #
+    # trend_value_series_1 = data.CURRENCY_DATA_DICT["BTCUSDT"].ohlcv_df["timestamp"].apply(f_tren_value("BTCUSDT"))
+    # trend_value_series_2 = data.CURRENCY_DATA_DICT["ETHUSDT"].ohlcv_df["timestamp"].apply(f_tren_value("ETHUSDT"))
+    #
+    # series = trend_value_series_1 / trend_value_series_2
 
     # series = data.AMPL_RATIO_DICT[("ETHUSDT", "DOGEUSDT")]["ampl_ratio"]
     # series = data.DEVIATION_K_DICT[("ETHUSDT", "DOGEUSDT")]["deviation_k"]
@@ -84,5 +103,5 @@ if __name__ == '__main__':
 
     # mark.mark_data()
     # mark.split_marked_data()
-    # comb.optimal_combs(limit_comb_n=4)
-    benchmark.super_benchmark()
+    comb.optimal_combs(limit_comb_n=1)
+    # benchmark.super_benchmark()

@@ -27,6 +27,7 @@ class CombGrade:
     count_: int
     sl_count: int
     uniformity: float
+    uniformity2: float
     k: float
     verify_grade: Self | None = None
 
@@ -107,10 +108,28 @@ def _comb_k(comb_df) -> float:
     k = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
     return k
 
+def _comb_uniformity_2(comb_df, timestamp_range):
+    values = comb_df["timestamp"].to_numpy()
+    n = len(values)
 
-def grade_comb(comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins=None) -> CombGrade:
+    if n == 0:
+        return 0.0
+
+    k = math.ceil(n * 0.5)
+
+    min_dist = float("inf")
+
+    for i in range(n - k + 1):
+        dist = values[i + k - 1] - values[i]
+        min_dist = min(min_dist, dist)
+
+    return min_dist / timestamp_range
+
+
+def grade_comb(comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins=None, timestamp_range=None) -> CombGrade:
     count_ = len(comb_df)
     sl_count = int(comb_df["sl"].sum())
+
     if interval_bins is None:
         uniformity = 0.0
     else:
@@ -118,11 +137,14 @@ def grade_comb(comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins=None)
 
     k = _comb_k(comb_df)
 
+    uniformity2 = _comb_uniformity_2(comb_df, timestamp_range)
+
     return CombGrade(
         comb=comb,
         count_=count_,
         sl_count=sl_count,
         uniformity=uniformity,
+        uniformity2=uniformity2,
         k=k
     )
 
@@ -158,9 +180,13 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
         #
 
         x = len(comb_grade.comb)
-        min_comb_count_ = 200 * math.exp(-0.4 * x) + 0
+        min_comb_count_ = 2000 * math.exp(-0.5 * x) + 0
 
         if comb_grade.count_ < min_comb_count_:
+            continue
+
+        if comb_grade.uniformity2 < 0.0:
+            # print(comb_grade.uniformity2)
             continue
 
         return comb_grade
