@@ -27,7 +27,8 @@ def comb_grade_worker(comb, selected_combs):
     select_mask = comb_engine.get_select_combs_mask(_train_df, [comb])
     comb_df = _train_df[select_mask]
 
-    return comb_engine.grade_comb(comb_df, comb)
+    timestamp_range = _train_df["timestamp"].iloc[-1] - _train_df["timestamp"].iloc[0]
+    return comb_engine.grade_comb(comb_df, comb, timestamp_range=timestamp_range)
 
 def grade_combs_parallel(all_combs, selected_combs):
     global _train_df

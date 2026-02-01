@@ -1,11 +1,13 @@
 import datetime as dt
 import os
+import time
 
 import numpy as np
 import pandas as pd
 
 from mp.market.binance_data_provider import BinanceDataProvider
 from mp.market.currency_data import CurrencyData
+from mp.optimizer import mark
 
 symbols = (
     "BTCUSDT",
@@ -36,6 +38,7 @@ deviation_pairs = (
 CURRENCY_DATA_DICT = {}
 DEVIATION_K_DICT = {}
 AMPL_RATIO_DICT = {}
+TREND_DICT = {}
 
 def init_currency_data_dict(interval, lower_bound_timestamp=None, upper_bound_timestamp=None, save_to_file=True):
 
@@ -126,3 +129,42 @@ def init_ampl_ratio_dict():
         ampl_ratio_df["ampl_ratio"] = ampl_ratio
 
         AMPL_RATIO_DICT[(symbol_1, symbol_2)] = ampl_ratio_df
+
+def init_trend_dict(save_to_file=True):
+
+    cache_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_dir = os.path.join(cache_dir, f"trend_data")
+
+    os.makedirs(cache_dir, exist_ok=True)
+
+    for symbol in symbols:
+        start = time.time()
+        df_data = []
+        print(f">>> init trend dict for {symbol}...")
+        for timestamp in CURRENCY_DATA_DICT[symbol].ohlcv_df["timestamp"]:
+            price_trend = mark.get_price_trend(symbol, timestamp)
+            price_trend_dict = {
+                "timestamp": timestamp,
+                "trend_kind": price_trend.trend_kind.name,
+                "trend_value": price_trend.trend_value,
+                "trend_len": price_trend.trend_len,
+            }
+            df_data.append(price_trend_dict)
+
+        df = pd.DataFrame(df_data)
+        TREND_DICT[symbol] = df
+        end = time.time()
+        print(f">>> elapsed time: {end - start} seconds.")
+
+        if save_to_file:
+            file_path = os.path.join(cache_dir, f"{symbol}.csv")
+            df.to_csv(file_path, index=False)
+
+
+def init_trend_dict_from_cache():
+    cache_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_dir = os.path.join(cache_dir, f"trend_data")
+
+    for symbol in symbols:
+        file_path = os.path.join(cache_dir, f"{symbol}.csv")
+        TREND_DICT[symbol] = pd.read_csv(file_path)
