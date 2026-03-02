@@ -861,7 +861,7 @@ class TradingOptimizer:
 
 if __name__ == "__main__":
     interval = Client.KLINE_INTERVAL_5MINUTE
-    # rd.init_runtime_data(interval)
+    rd.init_runtime_data(interval)
     # rd.init_runtime_data_from_cache(interval)
     optimizer = TradingOptimizer()
 
@@ -875,10 +875,9 @@ if __name__ == "__main__":
     min_comb_count = 20
     print_combs_or_look = False
 
-
     os.makedirs(DATA_DIR, exist_ok=True)
-    # opt = optimizer.mark_data()
-    # opt = optimizer.split_marked_data()
+    opt = optimizer.mark_data()
+    opt = optimizer.split_marked_data()
     selected_combs = [
         # CombGrade(comb=('#tag_current_trend_len_int2', '#tag_in_point_disp_int3', '#tag_trend_disp_growth_true'), count_=94, sl_count=26, uniformity=0.8404255319148937, k=2.6153846153846154, verify_grade=CombGrade(comb=None, count_=48, sl_count=12, uniformity=None, k=3.0, verify_grade=None)),
         # CombGrade(comb=('#tag_current_trend_len_int2', '#tag_trend_avg_disp_int2'), count_=51, sl_count=12, uniformity=0.8431372549019608, k=3.25, verify_grade=CombGrade(comb=None, count_=30, sl_count=7, uniformity=None, k=3.2857142857142856, verify_grade=None)),
@@ -887,5 +886,5 @@ if __name__ == "__main__":
 
     ]
     # opt = optimizer.optimal_combs(12, selected_combs)
-    opt = optimizer.super_benchmark()
+    # opt = optimizer.super_benchmark()
     # print(res)

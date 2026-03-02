@@ -39,6 +39,7 @@ CURRENCY_DATA_DICT = {}
 DEVIATION_K_DICT = {}
 AMPL_RATIO_DICT = {}
 TREND_DICT = {}
+PEAKS_AND_TREND_DICT = {}
 
 def init_currency_data_dict(interval, lower_bound_timestamp=None, upper_bound_timestamp=None, save_to_file=True):
 
@@ -168,3 +169,9 @@ def init_trend_dict_from_cache():
     for symbol in symbols:
         file_path = os.path.join(cache_dir, f"{symbol}.csv")
         TREND_DICT[symbol] = pd.read_csv(file_path)
+
+def init_peaks_and_trend_dict():
+    for symbol in symbols:
+        symbol_df = CURRENCY_DATA_DICT[symbol].ohlcv_df
+        peaks_and_trend_dict = mark.detect_peaks(symbol_df)
+        PEAKS_AND_TREND_DICT[symbol] = peaks_and_trend_dict

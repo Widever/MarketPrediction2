@@ -29,6 +29,9 @@ class CombGrade:
     uniformity: float
     uniformity2: float
     k: float
+    k2: float
+    peak_down_k: float
+    peak_down_n: int
     verify_grade: Self | None = None
 
 def get_select_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
@@ -105,7 +108,27 @@ def _comb_uniformity(comb_df, interval_bins) -> float:
 def _comb_k(comb_df) -> float:
     count_ = len(comb_df)
     sl_count = int(comb_df["sl"].sum())
-    k = (count_ - sl_count) / sl_count if sl_count > 0 else sl_count
+    k = (count_ - sl_count) / sl_count if sl_count > 0 else count_
+    return k
+
+def _comb_k2(comb_df) -> float:
+    count_ = len(comb_df)
+    sl_count = int(comb_df["sl"].sum())
+    k = (count_ - sl_count) - sl_count
+    if k < 0:
+        k = 0
+    return k
+
+def _peak_down_n(comb_df) -> int:
+    peak_down_n = int(comb_df["peak_down"].sum())
+    return peak_down_n
+
+def _peak_down_k(comb_df) -> float:
+    count_ = len(comb_df)
+    peak_down_count = _peak_down_n(comb_df)
+    k = (count_ - peak_down_count) / peak_down_count if peak_down_count > 0 else count_
+    if k < 0:
+        k = 0
     return k
 
 def _comb_uniformity_2(comb_df, timestamp_range):
@@ -145,8 +168,19 @@ def grade_comb(comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins=None,
         sl_count=sl_count,
         uniformity=uniformity,
         uniformity2=uniformity2,
-        k=k
+        k=k,
+        k2=_comb_k2(comb_df),
+        peak_down_k=_peak_down_k(comb_df),
+        peak_down_n=_peak_down_n(comb_df),
     )
+
+def f(x: float) -> float:
+    a = 300
+    if x <= 0:
+        x = 0
+    elif x >= a:
+        x = a
+    return 1 + 2 * x / a
 
 def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: pd.DataFrame,
                 all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
@@ -169,7 +203,7 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
     comb_grades = grade_combs_parallel(all_combs, selected_combs)
 
     print("Grading finished. Sorting comb_grades...")
-    comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.k, reverse=True))
+    comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.peak_down_k , reverse=False))
 
     i = 0
 
@@ -180,14 +214,19 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
         #
 
         x = len(comb_grade.comb)
-        min_comb_count_ = 2000 * math.exp(-0.5 * x) + 0
+
+        start_c = 300
+        end_c = 100
+        l = 10
+        # min_comb_count_ = 2000 * math.exp(-0.5 * x) + 0
+        min_comb_count_ = start_c - (start_c - end_c) / l * x
 
         if comb_grade.count_ < min_comb_count_:
             continue
 
-        if comb_grade.uniformity2 < 0.0:
-            # print(comb_grade.uniformity2)
-            continue
+        # if comb_grade.uniformity2 < 0.0:
+        #     # print(comb_grade.uniformity2)
+        #     continue
 
         return comb_grade
 
@@ -293,7 +332,7 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
             comb_grade = choose_comb(train_marked_points_df, verify_marked_points_df, combs, selected_combs,
                                           interval_bins)
 
-            if len(comb_grade.comb) < 8:
+            if len(comb_grade.comb) < 10:
 
                 filled_fields = {tag_to_field(x) for x in comb_grade.comb}
                 remaining_tags = [x for x in tags if tag_to_field(x) not in filled_fields]

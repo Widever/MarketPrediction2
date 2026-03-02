@@ -11,11 +11,17 @@ data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 def super_benchmark():
     combs: list[CombGrade] = [
-        CombGrade(comb=('#tag_btc_ada_amp_ratio_lt_0.3', '#tag_ada_trend_kind_gt_DOWN',
-                        '#tag_btc_doge_log_return_ratio_gt_0.2', '#tag_doge_ada_trend_value_ratio_lt_-0.2',
-                        '#tag_btc_ada_log_return_ratio_gt_0.25', '#tag_doge_ada_log_return_ratio_gt_0.8',
-                        '#tag_btc_eth_amp_ratio_lt_0.39', '#tag_eth_ada_log_return_ratio_gt_0.8'), count_=58,
-                  sl_count=7, uniformity=0.0, uniformity2=np.float64(0.2888291475061903), k=7.285714285714286,
+        # CombGrade(comb=('#tag_btc_doge_trend_value_ratio_gt_0.5', '#tag_doge_xrp_trend_value_ratio_lt_-0.5',
+        #                 '#tag_btc_eth_log_return_ratio_gt_0.0', '#tag_doge_xrp_amp_ratio_gt_0.5',
+        #                 '#tag_btc_trend_len_gt_10.0', '#tag_eth_xrp_amp_ratio_gt_0.5', '#tag_btc_xrp_amp_ratio_gt_0.25',
+        #                 '#tag_eth_trend_len_gt_5.0', '#tag_ada_trend_kind_eq_UP', '#tag_eth_ada_amp_ratio_gt_0.48'),
+        #           count_=90, sl_count=11, uniformity=0.0, uniformity2=np.float64(0.18961443226034666),
+        #           k=7.181818181818182, k2=68, verify_grade=None),
+        CombGrade(comb=('#tag_eth_ada_trend_value_ratio_lt_-0.5', '#tag_doge_trend_value_gt_0.01',
+                        '#tag_btc_eth_trend_value_ratio_gt_-1.0', '#tag_btc_ada_log_return_ratio_gt_0.0',
+                        '#tag_btc_trend_value_gt_-0.025', '#tag_doge_trend_len_gt_5.0', '#tag_btc_trend_len_gt_10.0',
+                        '#tag_eth_trend_len_gt_5.0', '#tag_sui_trend_len_gt_5.0', '#tag_ada_trend_len_lt_5.0'),
+                  count_=57, sl_count=8, uniformity=0.0, uniformity2=np.float64(0.11708524938096923), k=6.125, k2=41,
                   verify_grade=None),
 
     ]
