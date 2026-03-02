@@ -9,9 +9,10 @@ from mp.optimizer.comb import CombGrade, get_select_combs_mask
 
 
 def build_marked_points_df_for_point(symbol: str):
-    ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
+    # ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
+    peaks_and_trend_df = data.PEAKS_AND_TREND_DICT[symbol]
     opened_points = []
-    for idx, row in ohlcv_df.iterrows():
+    for idx, row in peaks_and_trend_df.iterrows():
         timestamp = int(row["timestamp"])
         point_values_ = mark.point_values(symbol, timestamp)
 
@@ -20,7 +21,14 @@ def build_marked_points_df_for_point(symbol: str):
             timestamp=timestamp,
             values=point_values_,
             sl_price_limit=0,
-            sell_price_limit=0
+            sell_price_limit=0,
+
+            rising=row["rising"],
+            falling=row["falling"],
+            flat=row["flat"],
+            peak_up=row["peak_up"],
+            peak_down=row["peak_down"],
+            change_from_last_peak=row["change_from_last_peak"]
         )
         opened_points.append(new_opened_marked_point)
 

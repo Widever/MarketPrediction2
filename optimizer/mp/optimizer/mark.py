@@ -23,52 +23,52 @@ sell_k = 1.01
 
 @dataclass(slots=True)
 class PointValues:
-    btc_eth_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.5, 1.1]})
-    btc_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.25, 0.62]})
-    btc_doge_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6]})
-    btc_xrp_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6]})
-    eth_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
-    eth_doge_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0]})
-    eth_xrp_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0]})
-    doge_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
-    doge_sui_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
-    doge_xrp_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8]})
+    btc_eth_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.5, 1.1, 2.1]})
+    btc_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.25, 0.62, 1.2]})
+    btc_doge_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6, 1.2]})
+    btc_xrp_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6, 1.2]})
+    eth_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})
+    eth_doge_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0, 1.6]})
+    eth_xrp_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0, 1.6]})
+    doge_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})
+    doge_sui_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})
+    doge_xrp_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})
     ######
-    btc_eth_amp_ratio: float = field(metadata={"intervals": [0.39, 0.52, 0.65]})
-    btc_ada_amp_ratio: float = field(metadata={"intervals": [0.3, 0.48, 0.6]})
-    btc_doge_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54]})
-    btc_xrp_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54]})
-    eth_ada_amp_ratio: float = field(metadata={"intervals": [0.48, 0.67, 0.9]})
-    eth_doge_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
-    eth_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
-    doge_ada_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
-    doge_sui_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
-    doge_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87]})
+    btc_eth_amp_ratio: float = field(metadata={"intervals": [0.39, 0.52, 0.65, 1.2]})
+    btc_ada_amp_ratio: float = field(metadata={"intervals": [0.3, 0.48, 0.6, 1.2]})
+    btc_doge_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54, 1.1]})
+    btc_xrp_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54, 1.1]})
+    eth_ada_amp_ratio: float = field(metadata={"intervals": [0.48, 0.67, 0.9, 1.8]})
+    eth_doge_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})
+    eth_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})
+    doge_ada_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})
+    doge_sui_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})
+    doge_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})
     ######
-    btc_eth_trend_value_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0]})
-    btc_ada_trend_value_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0]})
-    btc_doge_trend_value_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0]})
-    btc_xrp_trend_value_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0]})
-    eth_ada_trend_value_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4]})
-    eth_doge_trend_value_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4]})
-    eth_xrp_trend_value_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4]})
-    doge_ada_trend_value_ratio: float = field(metadata={"intervals": [-0.2, 0.8, 1.2]})
-    doge_sui_trend_value_ratio: float = field(metadata={"intervals": [-1.0, 1.0, 1.5]})
-    doge_xrp_trend_value_ratio: float = field(metadata={"intervals": [-0.5, 0.5, 1.0]})
+    btc_eth_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})
+    btc_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})
+    btc_doge_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})
+    btc_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})
+    eth_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})
+    eth_doge_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})
+    eth_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})
+    doge_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.2, 0.8, 1.2, 2.5]})
+    doge_sui_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 1.0, 1.5, 2.5]})
+    doge_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.5, 1.0, 2.5]})
     #####
-    btc_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
-    eth_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
-    ada_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
-    doge_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
-    xrp_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
-    sui_trend_len: int = field(metadata={"intervals": [5, 10, 20]})
+    btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
+    eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
+    ada_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
+    doge_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
+    xrp_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
+    sui_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     #####
-    btc_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
-    eth_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
-    ada_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
-    doge_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
-    xrp_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
-    sui_trend_kind: str = field(metadata={"enum": ["UP", "DOWN", "FLAT"]})
+    btc_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    eth_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    ada_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    doge_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    xrp_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    sui_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
 
 @dataclass(slots=True)
 class MarkedPoint:
@@ -82,11 +82,20 @@ class MarkedPoint:
     sl: bool = False
     scope: int = 0
 
+    rising: bool = False
+    falling: bool = False
+    flat: bool = False
+    peak_up: bool = False
+    peak_down: bool = False
+    change_from_last_peak: float = 0.0
+
+
 
 class PriceTrend(IntEnum):
     UP = auto()
     DOWN = auto()
     FLAT = auto()
+    UNKNOWN = auto()
 
 
 @dataclass
@@ -245,7 +254,7 @@ def _add_interval_tag_columns(df: pd.DataFrame, col: str, intervals: list[float]
 def _add_eq_tag_columns(df: pd.DataFrame, col: str, possible_values: list[int | float | str]) -> pd.DataFrame:
 
     for eq_v in possible_values:
-        df[f"#tag_{col}_gt_{eq_v}"] = df[col] == eq_v
+        df[f"#tag_{col}_eq_{eq_v}"] = df[col] == eq_v
 
     return df
 
@@ -317,16 +326,15 @@ def _ampl_ratio(symbol_1: str, symbol_2: str, timestamp: int) -> float:
 
     return values[idx == timestamp][0]
 
-def _trend_value_ratio(symbol_1: str, symbol_2: str, timestamp: int) -> float:
-    symbol_1_trend_df = data.TREND_DICT[symbol_1]
-    symbol_2_trend_df = data.TREND_DICT[symbol_2]
+def _trend_ch_from_peak_ratio(symbol_1: str, symbol_2: str, timestamp: int) -> float:
+    symbol_1_trend_df = data.PEAKS_AND_TREND_DICT[symbol_1]
+    symbol_2_trend_df = data.PEAKS_AND_TREND_DICT[symbol_2]
 
     idx = symbol_1_trend_df["timestamp"].values
 
-    trend_value_ratio = symbol_1_trend_df["trend_value"] / symbol_2_trend_df["trend_value"]
-    values = trend_value_ratio.values
+    trend_value_ratio = symbol_1_trend_df["change_from_last_peak"].values[idx == timestamp][0] / symbol_2_trend_df["change_from_last_peak"].values[idx == timestamp][0]
 
-    return values[idx == timestamp][0]
+    return trend_value_ratio
 
 def _trend_len(symbol: str, timestamp: int) -> int:
     trend_df = data.TREND_DICT[symbol]
@@ -335,12 +343,28 @@ def _trend_len(symbol: str, timestamp: int) -> int:
 
     return values[idx == timestamp][0]
 
-def _trend_kind(symbol: str, timestamp: int) -> str:
-    trend_df = data.TREND_DICT[symbol]
+def _trend_ch_from_peak(symbol: str, timestamp: int) -> float:
+    trend_df = data.PEAKS_AND_TREND_DICT[symbol]
     idx = trend_df["timestamp"].values
-    values = trend_df["trend_kind"].values
+    values = trend_df["change_from_last_peak"].values
 
     return values[idx == timestamp][0]
+
+def _trend_kind(symbol: str, timestamp: int) -> str:
+    trend_df = data.PEAKS_AND_TREND_DICT[symbol]
+    idx = trend_df["timestamp"].values
+    rising = trend_df["rising"].values[idx == timestamp][0]
+    flat = trend_df["flat"].values[idx == timestamp][0]
+    falling = trend_df["falling"].values[idx == timestamp][0]
+    
+    if rising:
+        return "rising"
+    elif flat:
+        return "flat"
+    elif falling:
+        return "falling"
+    else:
+        return "unknown"
 
 def point_values(symbol: str, timestamp: int) -> PointValues:
 
@@ -367,23 +391,16 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_xrp_amp_ratio=_ampl_ratio("DOGEUSDT", "XRPUSDT", timestamp),
         doge_sui_amp_ratio=_ampl_ratio("DOGEUSDT", "SUIUSDT", timestamp),
         ################
-        btc_eth_trend_value_ratio=_trend_value_ratio("BTCUSDT", "ETHUSDT", timestamp),
-        btc_ada_trend_value_ratio=_trend_value_ratio("BTCUSDT", "ADAUSDT", timestamp),
-        btc_doge_trend_value_ratio=_trend_value_ratio("BTCUSDT", "DOGEUSDT", timestamp),
-        btc_xrp_trend_value_ratio=_trend_value_ratio("BTCUSDT", "XRPUSDT", timestamp),
-        eth_ada_trend_value_ratio=_trend_value_ratio("ETHUSDT", "ADAUSDT", timestamp),
-        eth_doge_trend_value_ratio=_trend_value_ratio("ETHUSDT", "DOGEUSDT", timestamp),
-        eth_xrp_trend_value_ratio=_trend_value_ratio("ETHUSDT", "XRPUSDT", timestamp),
-        doge_ada_trend_value_ratio=_trend_value_ratio("DOGEUSDT", "ADAUSDT", timestamp),
-        doge_xrp_trend_value_ratio=_trend_value_ratio("DOGEUSDT", "XRPUSDT", timestamp),
-        doge_sui_trend_value_ratio=_trend_value_ratio("DOGEUSDT", "SUIUSDT", timestamp),
-        ###########
-        btc_trend_len=_trend_len("BTCUSDT", timestamp),
-        eth_trend_len=_trend_len("ETHUSDT", timestamp),
-        ada_trend_len=_trend_len("ADAUSDT", timestamp),
-        doge_trend_len=_trend_len("DOGEUSDT", timestamp),
-        xrp_trend_len=_trend_len("XRPUSDT", timestamp),
-        sui_trend_len=_trend_len("SUIUSDT", timestamp),
+        btc_eth_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "ETHUSDT", timestamp),
+        btc_ada_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "ADAUSDT", timestamp),
+        btc_doge_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "DOGEUSDT", timestamp),
+        btc_xrp_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "XRPUSDT", timestamp),
+        eth_ada_ch_from_peak_ratio=_trend_ch_from_peak_ratio("ETHUSDT", "ADAUSDT", timestamp),
+        eth_doge_ch_from_peak_ratio=_trend_ch_from_peak_ratio("ETHUSDT", "DOGEUSDT", timestamp),
+        eth_xrp_ch_from_peak_ratio=_trend_ch_from_peak_ratio("ETHUSDT", "XRPUSDT", timestamp),
+        doge_ada_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "ADAUSDT", timestamp),
+        doge_xrp_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "XRPUSDT", timestamp),
+        doge_sui_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "SUIUSDT", timestamp),
         ########
         btc_trend_kind=_trend_kind("BTCUSDT", timestamp),
         eth_trend_kind=_trend_kind("ETHUSDT", timestamp),
@@ -391,7 +408,90 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_trend_kind=_trend_kind("DOGEUSDT", timestamp),
         xrp_trend_kind=_trend_kind("XRPUSDT", timestamp),
         sui_trend_kind=_trend_kind("SUIUSDT", timestamp),
+        #######
+        btc_trend_ch_from_peak=_trend_ch_from_peak("BTCUSDT", timestamp),
+        eth_trend_ch_from_peak=_trend_ch_from_peak("ETHUSDT", timestamp),
+        ada_trend_ch_from_peak=_trend_ch_from_peak("ADAUSDT", timestamp),
+        doge_trend_ch_from_peak=_trend_ch_from_peak("DOGEUSDT", timestamp),
+        xrp_trend_ch_from_peak=_trend_ch_from_peak("XRPUSDT", timestamp),
+        sui_trend_ch_from_peak=_trend_ch_from_peak("SUIUSDT", timestamp),
     )
+
+def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+
+    result = df.copy()
+
+    result["rising"] = False
+    result["falling"] = False
+    result["flat"] = False
+    result["peak_up"] = False
+    result["peak_down"] = False
+    result["change_from_last_peak"] = 0.0
+
+    trend = PriceTrend.UNKNOWN
+
+    last_high = result.iloc[0]["high"]
+    last_low = result.iloc[0]["low"]
+    last_high_idx = 0
+    last_low_idx = 0
+
+    last_peak_price = None
+
+    for i in range(1, len(result)):
+        high = result.iloc[i]["high"]
+        low = result.iloc[i]["low"]
+        close = result.iloc[i]["close"]
+
+        # Оновлюємо екстремуми
+        if high > last_high:
+            last_high = high
+            last_high_idx = i
+
+        if low < last_low:
+            last_low = low
+            last_low_idx = i
+
+        drop_from_high = (last_high - low) / last_high
+        rise_from_low = (high - last_low) / last_low
+
+        # Падіння більше threshold → фіксуємо peak_up
+        if drop_from_high >= threshold and trend != PriceTrend.DOWN:
+            result.loc[last_high_idx, "peak_up"] = True
+            last_peak_price = last_high
+            trend = PriceTrend.DOWN
+
+            last_low = low
+            last_low_idx = i
+
+        # Ріст більше threshold → фіксуємо peak_down
+        elif rise_from_low >= threshold and trend != PriceTrend.UP:
+            result.loc[last_low_idx, "peak_down"] = True
+            last_peak_price = last_low
+            trend = PriceTrend.UP
+
+            last_high = high
+            last_high_idx = i
+
+        # Тренд/flat
+        if drop_from_high < threshold and rise_from_low < threshold:
+            result.loc[i, "flat"] = True
+            trend = PriceTrend.FLAT
+        elif trend == PriceTrend.UP:
+            result.loc[i, "rising"] = True
+        elif trend == PriceTrend.DOWN:
+            result.loc[i, "falling"] = True
+
+        # Зміна від останнього піку
+        if last_peak_price is not None:
+            result.loc[i, "change_from_last_peak"] = (
+                close - last_peak_price
+            ) / last_peak_price
+        else:
+            result.loc[i, "change_from_last_peak"] = 0.0
+
+    return result
 
 def mark_data():
     start_time = time.time()
@@ -400,12 +500,14 @@ def mark_data():
 
     os.makedirs(data_dir, exist_ok=True)
 
-    ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
+    # ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
+    peaks_and_trend_df = data.PEAKS_AND_TREND_DICT[symbol]
+    
     opened_points: list[MarkedPoint] = []
 
-    df_len = len(ohlcv_df)
-    print(f"OHLCV df len = {df_len}. Start marking data...")
-    for idx, row in ohlcv_df.iterrows():
+    df_len = len(peaks_and_trend_df)
+    print(f"OHLCV+peaks+trend df len = {df_len}. Start marking data...")
+    for idx, row in peaks_and_trend_df.iterrows():
         if idx % 10000 == 0:
             print(f"Marked {idx}/{df_len} points.")
 
@@ -440,7 +542,14 @@ def mark_data():
             timestamp=timestamp,
             values=point_values_,
             sl_price_limit=sl_limit_price,
-            sell_price_limit=sell_limit_price
+            sell_price_limit=sell_limit_price,
+            
+            rising=row["rising"],
+            falling=row["falling"],
+            flat=row["flat"],
+            peak_up=row["peak_up"],
+            peak_down=row["peak_down"],
+            change_from_last_peak=row["change_from_last_peak"],
         )
         opened_points.append(new_opened_marked_point)
 

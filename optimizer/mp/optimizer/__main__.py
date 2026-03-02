@@ -73,7 +73,8 @@ if __name__ == '__main__':
     data.init_ampl_ratio_dict()
 
     # data.init_trend_dict()
-    data.init_trend_dict_from_cache()
+    # data.init_trend_dict_from_cache()
+    data.init_peaks_and_trend_dict()
 
     check_currency_data_dict()
     check_deviation_k_dict()
