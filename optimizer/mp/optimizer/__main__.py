@@ -1,4 +1,8 @@
+import random
+from pathlib import Path
+
 import numpy as np
+import datetime as dt
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -65,6 +69,60 @@ def plot_series_histogram(
     plt.tight_layout()
     plt.show()
 
+def write_stat(option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k):
+    path = Path("options_stat.txt")
+
+    # створює файл, якщо не існує
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.touch(exist_ok=True)
+
+    # запис у кінець файлу
+    with path.open("a", encoding="utf-8") as f:
+        timestamp = dt.datetime.now().isoformat()
+        f.write(f"[{timestamp}] {option}\n")
+        f.write(f"{optimal_combs}\n")
+        f.write("\n")
+        f.write(f"{intervals_stat}\n")
+        f.write("\n")
+        f.write(f"Total: {total_count=}, {total_sl_count=}, {total_k=}\n")
+        f.write("\n")
+        f.write("\n")
+        f.write("===================================================\n")
+        f.write("===================================================\n")
+        f.write("===================================================\n")
+
+def generate_grid_options(
+    l_values=None,
+    end_c_range=(11, 200),
+    end_step=10,
+    start_step=10,
+):
+    options = []
+
+    if l_values is None:
+        l_values = list(range(5, 16))  # 5..15
+
+    for l in l_values:
+        min_diff = 5 * l
+
+        for end_c in range(end_c_range[0], end_c_range[1], end_step):
+            start_min = end_c + min_diff + 1
+
+            if start_min >= 400:
+                continue
+
+            # округляємо до найближчого step
+            start_min = ((start_min + start_step - 1) // start_step) * start_step
+
+            for start_c in range(start_min, 300, start_step):
+                options.append({
+                    "start_c": start_c,
+                    "end_c": end_c,
+                    "l": l
+                })
+
+    return options
+
 if __name__ == '__main__':
 
     data.init_currency_data_dict_from_cache("5m")
@@ -74,7 +132,7 @@ if __name__ == '__main__':
 
     # data.init_trend_dict()
     # data.init_trend_dict_from_cache()
-    data.init_peaks_and_trend_dict()
+    # data.init_peaks_and_trend_dict()
 
     check_currency_data_dict()
     check_deviation_k_dict()
@@ -104,5 +162,26 @@ if __name__ == '__main__':
 
     # mark.mark_data()
     # mark.split_marked_data()
-    comb.optimal_combs(limit_comb_n=1)
-    # benchmark.super_benchmark()
+
+    options = [
+        {"start_c": 200, "end_c":50, "l": 15},
+        {"start_c": 100, "end_c":50, "l": 15},
+        {"start_c": 100, "end_c":50, "l": 10},
+        ...
+    ]
+    options = generate_grid_options(
+        l_values=[5, 10, 15],
+        end_step=50,  # грубіший grid
+        start_step=30
+    )
+    options = random.sample(options, 20)
+
+    print(str(options).replace("},", "},\n"))
+    for option in options:
+        optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
+        if optimal_combs:
+            intervals_stat, total_count, total_sl_count, total_k = benchmark.super_benchmark(optimal_combs)
+        else:
+            intervals_stat, total_count, total_sl_count, total_k = ("empty", 0, 0, 0)
+
+        write_stat(option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k)

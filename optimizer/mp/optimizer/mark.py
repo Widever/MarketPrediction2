@@ -88,6 +88,7 @@ class MarkedPoint:
     peak_up: bool = False
     peak_down: bool = False
     change_from_last_peak: float = 0.0
+    ampl: float = 0.0
 
 
 
@@ -244,9 +245,8 @@ def _add_interval_tag_columns(df: pd.DataFrame, col: str, intervals: list[float]
 
         gt_v += shift_interval
 
-        if i == 0:
-            df[f"#tag_{col}_lt_{gt_v}"] = df[col] < gt_v
-
+        # if i == 0:
+        df[f"#tag_{col}_lt_{gt_v}"] = df[col] < gt_v
         df[f"#tag_{col}_gt_{gt_v}"] = df[col] >= gt_v
 
     return df
@@ -517,6 +517,7 @@ def mark_data():
         low_price = float(row["low"])
         high_price = float(row["high"])
         timestamp = int(row["timestamp"])
+        ampl = (high_price - low_price) / low_price
 
         remaining_opened_points = []
         for opened_point in opened_points:
@@ -550,6 +551,7 @@ def mark_data():
             peak_up=row["peak_up"],
             peak_down=row["peak_down"],
             change_from_last_peak=row["change_from_last_peak"],
+            ampl=ampl
         )
         opened_points.append(new_opened_marked_point)
 
