@@ -24,7 +24,7 @@ def comb_grade_worker(comb, selected_combs):
                                                               [selected_comb.comb for selected_comb in selected_combs])
             _train_df = _train_df[exclude_mask].reset_index(drop=True)
 
-    select_mask = comb_engine.get_select_combs_mask(_train_df, [comb])
+    select_mask = comb_engine.get_select_combs_mask_ignore_scope(_train_df, [comb])
     comb_df = _train_df[select_mask]
 
     timestamp_range = _train_df["timestamp"].iloc[-1] - _train_df["timestamp"].iloc[0]

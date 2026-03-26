@@ -9,24 +9,25 @@ data_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 
-def super_benchmark():
-    combs: list[CombGrade] = [
-        # CombGrade(comb=('#tag_btc_doge_trend_value_ratio_gt_0.5', '#tag_doge_xrp_trend_value_ratio_lt_-0.5',
-        #                 '#tag_btc_eth_log_return_ratio_gt_0.0', '#tag_doge_xrp_amp_ratio_gt_0.5',
-        #                 '#tag_btc_trend_len_gt_10.0', '#tag_eth_xrp_amp_ratio_gt_0.5', '#tag_btc_xrp_amp_ratio_gt_0.25',
-        #                 '#tag_eth_trend_len_gt_5.0', '#tag_ada_trend_kind_eq_UP', '#tag_eth_ada_amp_ratio_gt_0.48'),
-        #           count_=90, sl_count=11, uniformity=0.0, uniformity2=np.float64(0.18961443226034666),
-        #           k=7.181818181818182, k2=68, verify_grade=None),
-        CombGrade(comb=('#tag_eth_ada_trend_value_ratio_lt_-0.5', '#tag_doge_trend_value_gt_0.01',
-                        '#tag_btc_eth_trend_value_ratio_gt_-1.0', '#tag_btc_ada_log_return_ratio_gt_0.0',
-                        '#tag_btc_trend_value_gt_-0.025', '#tag_doge_trend_len_gt_5.0', '#tag_btc_trend_len_gt_10.0',
-                        '#tag_eth_trend_len_gt_5.0', '#tag_sui_trend_len_gt_5.0', '#tag_ada_trend_len_lt_5.0'),
-                  count_=57, sl_count=8, uniformity=0.0, uniformity2=np.float64(0.11708524938096923), k=6.125, k2=41,
-                  verify_grade=None),
-
-    ]
+def super_benchmark(combs: list[CombGrade] = None):
+    # combs: list[CombGrade] = [
+    #     CombGrade(comb=('#tag_ada_trend_kind_eq_falling', '#tag_btc_ada_ch_from_peak_ratio_gt_1.0',
+    #                     '#tag_doge_sui_amp_ratio_gt_0.87', '#tag_doge_ada_log_return_ratio_lt_1.6',
+    #                     '#tag_btc_doge_log_return_ratio_gt_-0.2', '#tag_eth_xrp_log_return_ratio_lt_1.6',
+    #                     '#tag_btc_eth_log_return_ratio_gt_0.0', '#tag_doge_xrp_log_return_ratio_lt_1.6',
+    #                     '#tag_eth_ada_amp_ratio_gt_0.48', '#tag_btc_doge_amp_ratio_gt_0.25',
+    #                     '#tag_eth_ada_log_return_ratio_gt_0.4', '#tag_btc_eth_ch_from_peak_ratio_gt_-1.0',
+    #                     '#tag_eth_doge_amp_ratio_gt_0.7', '#tag_btc_doge_ch_from_peak_ratio_gt_1.0',
+    #                     '#tag_ada_trend_ch_from_peak_gt_-0.025'), score=0.3780487804878049,
+    #               props={'loss': 52, 'profit': 12}, verify_grade=None),
+    #
+    # ]
 
     marked_points_df = pd.read_csv(f"{data_dir}/marked_points_frozen.csv")
+    profit = len(marked_points_df[(marked_points_df["peak_down"]) & (~marked_points_df["peak_up"])])
+    loss = len(marked_points_df) - profit
+    print(f"{profit=}")
+    print(f"{loss=}")
 
     select_mask = get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
 
@@ -50,3 +51,4 @@ def super_benchmark():
     print(intervals_stat)
     print()
     print(f"Total: {total_count=}, {total_sl_count=}, {total_k=}")
+    return intervals_stat, total_count, total_sl_count, total_k

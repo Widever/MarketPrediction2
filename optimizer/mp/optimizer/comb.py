@@ -23,15 +23,9 @@ data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 @dataclass(slots=True)
 class CombGrade:
-    comb: tuple[str, ...] | None
-    count_: int
-    sl_count: int
-    uniformity: float
-    uniformity2: float
-    k: float
-    k2: float
-    peak_down_k: float
-    peak_down_n: int
+    comb: tuple[str, ...] | None = None
+    score: float = 0.0
+    props: dict = dataclasses.field(default_factory=dict)
     verify_grade: Self | None = None
 
 def get_select_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
@@ -58,6 +52,19 @@ def get_select_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str,
             skip = int(scopes[i])
 
     return pd.Series(mask, index=marked_points_df.index)
+
+def get_select_combs_mask_ignore_scope(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
+    if not combs:
+        return pd.Series(False, index=marked_points_df.index)
+
+    combs_masks = [
+        marked_points_df[list(comb)].all(axis=1)
+        for comb in combs
+    ]
+
+    any_comb = np.logical_or.reduce(combs_masks)
+
+    return pd.Series(any_comb, index=marked_points_df.index)
 
 
 def get_exclude_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
@@ -148,30 +155,27 @@ def _comb_uniformity_2(comb_df, timestamp_range):
 
     return min_dist / timestamp_range
 
+def bayesian_peak_down_winrate(comb_df, alpha=10, beta=10, props=None):
+    profit = len(comb_df[(comb_df["peak_down"]) & (~comb_df["peak_up"])])
+    loss = len(comb_df) - profit
+
+    if props is not None:
+        props["loss"] = loss
+        props["profit"] = profit
+    # return profit
+    # if profit <= 500:
+    #     return 0.0
+
+    return (profit + alpha) / (profit + loss + alpha + beta)
 
 def grade_comb(comb_df: pd.DataFrame, comb: tuple[str, ...], interval_bins=None, timestamp_range=None) -> CombGrade:
-    count_ = len(comb_df)
-    sl_count = int(comb_df["sl"].sum())
-
-    if interval_bins is None:
-        uniformity = 0.0
-    else:
-        uniformity = _comb_uniformity(comb_df, interval_bins)
-
-    k = _comb_k(comb_df)
-
-    uniformity2 = _comb_uniformity_2(comb_df, timestamp_range)
+    props = {}
+    score = bayesian_peak_down_winrate(comb_df, alpha=50, beta=50, props=props)
 
     return CombGrade(
         comb=comb,
-        count_=count_,
-        sl_count=sl_count,
-        uniformity=uniformity,
-        uniformity2=uniformity2,
-        k=k,
-        k2=_comb_k2(comb_df),
-        peak_down_k=_peak_down_k(comb_df),
-        peak_down_n=_peak_down_n(comb_df),
+        score=score,
+        props=props
     )
 
 def f(x: float) -> float:
@@ -183,7 +187,7 @@ def f(x: float) -> float:
     return 1 + 2 * x / a
 
 def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: pd.DataFrame,
-                all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins) -> CombGrade:
+                all_combs: list[tuple[str, ...]], selected_combs: list[CombGrade], interval_bins, start_c, end_c, l) -> CombGrade:
     print(f"Selected combs count: {len(selected_combs)}.")
     if selected_combs:
         exclude_mask = get_exclude_combs_mask(train_marked_points_df,
@@ -203,7 +207,7 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
     comb_grades = grade_combs_parallel(all_combs, selected_combs)
 
     print("Grading finished. Sorting comb_grades...")
-    comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.peak_down_k , reverse=False))
+    comb_grades_sorted: list[CombGrade] = list(sorted(comb_grades, key=lambda x: x.score , reverse=True))
 
     i = 0
 
@@ -215,13 +219,13 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
 
         x = len(comb_grade.comb)
 
-        start_c = 300
-        end_c = 100
-        l = 10
+        # start_c = 150
+        # end_c = 10
+        # l = 15
         # min_comb_count_ = 2000 * math.exp(-0.5 * x) + 0
         min_comb_count_ = start_c - (start_c - end_c) / l * x
 
-        if comb_grade.count_ < min_comb_count_:
+        if comb_grade.props["profit"] < min_comb_count_:
             continue
 
         # if comb_grade.uniformity2 < 0.0:
@@ -280,7 +284,7 @@ def tag_to_field(tag: str) -> str:
 
     raise RuntimeError(f"Tag {tag} is unknown field.")
 
-def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
+def optimal_combs(limit_comb_n=10, selected_combs=None, start_c=None, end_c=None, l=None) -> list[CombGrade]:
     full_time_start = time.time()
 
     train_marked_points_df = pd.read_csv(f"{data_dir}/marked_points_train.csv")
@@ -313,7 +317,7 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
     #     list_of_field_tags = [dict_of_field_tags[f] for f in field_comb]
     #     combinations += list(itertools.product(*list_of_field_tags))
 
-    start_combs: list[tuple[str, ...]] = list(itertools.combinations(tags, 2))
+    start_combs: list[tuple[str, ...]] = list(itertools.combinations(tags, 1))
     combs: list[tuple[str, ...]] = start_combs
 
     print(f"All combs len: {len(combs)}")
@@ -330,9 +334,9 @@ def optimal_combs(limit_comb_n=10, selected_combs=None) -> list[CombGrade]:
             start_time = time.time()
 
             comb_grade = choose_comb(train_marked_points_df, verify_marked_points_df, combs, selected_combs,
-                                          interval_bins)
+                                          interval_bins, start_c, end_c, l)
 
-            if len(comb_grade.comb) < 10:
+            if len(comb_grade.comb) < l:
 
                 filled_fields = {tag_to_field(x) for x in comb_grade.comb}
                 remaining_tags = [x for x in tags if tag_to_field(x) not in filled_fields]

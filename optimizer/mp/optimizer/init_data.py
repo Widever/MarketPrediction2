@@ -171,7 +171,11 @@ def init_trend_dict_from_cache():
         TREND_DICT[symbol] = pd.read_csv(file_path)
 
 def init_peaks_and_trend_dict():
+    print(">>> init peaks and trend dict...")
+    start = time.time()
     for symbol in symbols:
         symbol_df = CURRENCY_DATA_DICT[symbol].ohlcv_df
         peaks_and_trend_dict = mark.detect_peaks(symbol_df)
         PEAKS_AND_TREND_DICT[symbol] = peaks_and_trend_dict
+    end = time.time()
+    print(f">>> elapsed time: {end - start} seconds.")
