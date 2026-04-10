@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 
-from mp.optimizer.comb import CombGrade, get_select_combs_mask
+from mp.optimizer.comb import CombGrade, get_select_combs_mask, profit_loss_in_df
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
@@ -24,14 +24,16 @@ def super_benchmark(combs: list[CombGrade] = None):
     # ]
 
     marked_points_df = pd.read_csv(f"{data_dir}/marked_points_frozen.csv")
-    profit = len(marked_points_df[(marked_points_df["peak_down"]) & (~marked_points_df["peak_up"])])
-    loss = len(marked_points_df) - profit
+    profit, loss = profit_loss_in_df(marked_points_df)
     print(f"{profit=}")
     print(f"{loss=}")
 
-    select_mask = get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
+    if combs:
+        select_mask = get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
 
-    selected_df = marked_points_df[select_mask].reset_index(drop=True)
+        selected_df = marked_points_df[select_mask].reset_index(drop=True)
+    else:
+        selected_df = marked_points_df
 
     selected_df["interval"] = pd.cut(selected_df["index"], bins=10)
 
@@ -52,3 +54,6 @@ def super_benchmark(combs: list[CombGrade] = None):
     print()
     print(f"Total: {total_count=}, {total_sl_count=}, {total_k=}")
     return intervals_stat, total_count, total_sl_count, total_k
+
+if __name__ == "__main__":
+    super_benchmark([])

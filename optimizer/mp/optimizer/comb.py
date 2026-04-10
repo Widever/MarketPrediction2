@@ -155,13 +155,18 @@ def _comb_uniformity_2(comb_df, timestamp_range):
 
     return min_dist / timestamp_range
 
-def bayesian_peak_down_winrate(comb_df, alpha=10, beta=10, props=None):
-    profit = len(comb_df[(comb_df["peak_down"]) & (~comb_df["peak_up"])])
+def profit_loss_in_df(comb_df):
+    profit = len(comb_df[(comb_df["peak_down"]) & (~comb_df["peak_up"]) & (comb_df["change_from_last_peak"] > -0.03)])
     loss = len(comb_df) - profit
+    return profit, loss
+
+def bayesian_peak_down_winrate(comb_df, alpha=10, beta=10, props=None):
+    profit, loss = profit_loss_in_df(comb_df)
 
     if props is not None:
         props["loss"] = loss
         props["profit"] = profit
+        props["total"] = len(comb_df)
     # return profit
     # if profit <= 500:
     #     return 0.0

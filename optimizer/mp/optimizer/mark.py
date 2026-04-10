@@ -63,12 +63,12 @@ class PointValues:
     xrp_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     sui_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     #####
-    btc_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
-    eth_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
-    ada_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
-    doge_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
-    xrp_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
-    sui_trend_ch_from_peak: float = field(metadata={"intervals": [-0.025, 0.01, 0.025, 0.05]})
+    btc_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
+    eth_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
+    ada_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
+    doge_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
+    xrp_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
+    sui_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})
 
 @dataclass(slots=True)
 class MarkedPoint:
@@ -486,7 +486,7 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
         # Зміна від останнього піку
         if last_peak_price is not None:
             result.loc[i, "change_from_last_peak"] = (
-                close - last_peak_price
+                low - last_peak_price
             ) / last_peak_price
         else:
             result.loc[i, "change_from_last_peak"] = 0.0
@@ -580,3 +580,55 @@ def split_marked_data():
 
     first.to_csv(f"{data_dir}/marked_points_train.csv", index=False)
     second.to_csv(f"{data_dir}/marked_points_verify.csv", index=False)
+
+def adjust_point_values():
+    poin_values_lines = [
+    'btc_eth_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.5, 1.1, 2.1]})',
+    'btc_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.25, 0.62, 1.2]})',
+    'btc_doge_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6, 1.2]})',
+    'btc_xrp_log_return_ratio: float = field(metadata={"intervals": [-0.2, 0.2, 0.6, 1.2]})',
+    'eth_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})',
+    'eth_doge_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0, 1.6]})',
+    'eth_xrp_log_return_ratio: float = field(metadata={"intervals": [0.25, 0.75, 1.0, 1.6]})',
+    'doge_ada_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})',
+    'doge_sui_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})',
+    'doge_xrp_log_return_ratio: float = field(metadata={"intervals": [0.0, 0.4, 0.8, 1.6]})',
+    '######',
+    'btc_eth_amp_ratio: float = field(metadata={"intervals": [0.39, 0.52, 0.65, 1.2]})',
+    'btc_ada_amp_ratio: float = field(metadata={"intervals": [0.3, 0.48, 0.6, 1.2]})',
+    'btc_doge_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54, 1.1]})',
+    'btc_xrp_amp_ratio: float = field(metadata={"intervals": [0.25, 0.36, 0.54, 1.1]})',
+    'eth_ada_amp_ratio: float = field(metadata={"intervals": [0.48, 0.67, 0.9, 1.8]})',
+    'eth_doge_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})',
+    'eth_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})',
+    'doge_ada_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})',
+    'doge_sui_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})',
+    'doge_xrp_amp_ratio: float = field(metadata={"intervals": [0.5, 0.7, 0.87, 1.8]})',
+    '######',
+    'btc_eth_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})',
+    'btc_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})',
+    'btc_doge_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})',
+    'btc_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 0.5, 1.0, 2.0]})',
+    'eth_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})',
+    'eth_doge_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})',
+    'eth_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.8, 1.4, 2.5]})',
+    'doge_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.2, 0.8, 1.2, 2.5]})',
+    'doge_sui_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.0, 1.0, 1.5, 2.5]})',
+    'doge_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.5, 0.5, 1.0, 2.5]})',
+    '#####',
+    'btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    'eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    'ada_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    'doge_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    'xrp_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    'sui_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
+    '#####',
+    'btc_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    'eth_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    'ada_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    'doge_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    'xrp_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    'sui_trend_ch_from_peak: float = field(metadata={"intervals": [-0.04, -0.03, -0.02, -0.01, 0.01]})',
+    ]
+    print('\n'.join(poin_values_lines))
+
