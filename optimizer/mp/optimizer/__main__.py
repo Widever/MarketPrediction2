@@ -69,8 +69,8 @@ def plot_series_histogram(
     plt.tight_layout()
     plt.show()
 
-def write_stat(option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k):
-    path = Path("options_stat.txt")
+def write_stat(f_name, option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k):
+    path = Path(f_name)
 
     # створює файл, якщо не існує
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -163,25 +163,40 @@ if __name__ == '__main__':
     # mark.mark_data()
     # mark.split_marked_data()
 
+    f_name = "options_stats/exp_18-04_1.txt"
+    # options = generate_grid_options(
+    #     l_values=[25],
+    #     end_step=50,  # грубіший grid
+    #     start_step=20
+    # )
     options = [
-        {"start_c": 200, "end_c":50, "l": 15},
-        {"start_c": 100, "end_c":50, "l": 15},
-        {"start_c": 100, "end_c":50, "l": 10},
-        ...
+        {
+            "start_c": 40,
+            "end_c": 10,
+            "l": 10
+        },
+        {
+            "start_c": 50,
+            "end_c": 20,
+            "l": 10
+        },
+        {
+            "start_c": 80,
+            "end_c": 50,
+            "l": 10
+        },
     ]
-    options = generate_grid_options(
-        l_values=[5, 10, 15],
-        end_step=50,  # грубіший grid
-        start_step=30
-    )
-    options = random.sample(options, 20)
+    # options = random.sample(options, 50)
 
     print(str(options).replace("},", "},\n"))
     for option in options:
         optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
+
         if optimal_combs:
             intervals_stat, total_count, total_sl_count, total_k = benchmark.super_benchmark(optimal_combs)
         else:
             intervals_stat, total_count, total_sl_count, total_k = ("empty", 0, 0, 0)
 
-        write_stat(option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k)
+        write_stat(f_name, option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k)
+
+    # mark.adjust_point_values()
