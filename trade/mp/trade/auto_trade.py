@@ -42,6 +42,7 @@ def update_runtime_data(interval):
     data.init_currency_data_dict(interval, lower_bound_timestamp, upper_bound_timestamp, save_to_file=False)
     data.init_deviation_k_dict()
     data.init_ampl_ratio_dict()
+    data.init_peaks_and_trend_dict()
 
 
 def validate_runtime_data():

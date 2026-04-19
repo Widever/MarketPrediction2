@@ -246,21 +246,23 @@ def get_price_trend(symbol: str, timestamp: int) -> PriceTrendInfo:
 def _add_interval_tag_columns(df: pd.DataFrame, col: str, intervals: list[float]) -> pd.DataFrame:
 
     shift_interval = 0.0
+    new_cols = {}
     for i, gt_v in enumerate(intervals):
 
         gt_v += shift_interval
 
         # if i == 0:
-        df[f"#tag_{col}_lt_{gt_v}"] = df[col] < gt_v
-        df[f"#tag_{col}_gt_{gt_v}"] = df[col] >= gt_v
+        new_cols[f"#tag_{col}_lt_{gt_v}"] = df[col] < gt_v
+        new_cols[f"#tag_{col}_gt_{gt_v}"] = df[col] >= gt_v
 
+    df = pd.concat([df, pd.DataFrame(new_cols)], axis=1)
     return df
 
 def _add_eq_tag_columns(df: pd.DataFrame, col: str, possible_values: list[int | float | str]) -> pd.DataFrame:
-
+    new_cols = {}
     for eq_v in possible_values:
-        df[f"#tag_{col}_eq_{eq_v}"] = df[col] == eq_v
-
+        new_cols[f"#tag_{col}_eq_{eq_v}"] = df[col] == eq_v
+    df = pd.concat([df, pd.DataFrame(new_cols)], axis=1)
     return df
 
 def _add_str_tag_columns(df: pd.DataFrame, col: str, values=None) -> pd.DataFrame:
@@ -276,8 +278,11 @@ def _add_str_tag_columns(df: pd.DataFrame, col: str, values=None) -> pd.DataFram
     return df
 
 def _add_bool_tag_columns(df: pd.DataFrame, col: str) -> pd.DataFrame:
-    df[f"#tag_{col}_true"] = df[col]
-    df[f"#tag_{col}_false"] = ~df[col]
+    new_cols = {
+        f"#tag_{col}_true": df[col],
+        f"#tag_{col}_false": ~df[col]
+    }
+    df = pd.concat([df, pd.DataFrame(new_cols)], axis=1)
     return df
 
 def add_tags_for_point_values(marked_points_values_df: pd.DataFrame) -> pd.DataFrame:
