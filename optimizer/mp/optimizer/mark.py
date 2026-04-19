@@ -33,6 +33,7 @@ class PointValues:
     doge_ada_log_return_ratio: float = field(metadata={"intervals": [1.569, 2.868, 4.166, 5.465]})
     doge_sui_log_return_ratio: float = field(metadata={"intervals": [-0.623, 1.209, 3.042, 4.875]})
     doge_xrp_log_return_ratio: float = field(metadata={"intervals": [-1.226, -0.33, 0.566, 1.462]})
+    avg_log_return_ratio: float = field(metadata={"intervals": [0.468, 0.562, 0.655, 0.749]})
     ######
     btc_eth_amp_ratio: float = field(metadata={"intervals": [0.39, 0.676, 0.963, 1.249]})
     btc_ada_amp_ratio: float = field(metadata={"intervals": [0.305, 0.557, 0.808, 1.06]})
@@ -44,6 +45,7 @@ class PointValues:
     doge_ada_amp_ratio: float = field(metadata={"intervals": [0.775, 1.21, 1.646, 2.081]})
     doge_sui_amp_ratio: float = field(metadata={"intervals": [0.724, 1.178, 1.633, 2.088]})
     doge_xrp_amp_ratio: float = field(metadata={"intervals": [1.046, 1.701, 2.356, 3.011]})
+    avg_ampl_ratio: float = field(metadata={"intervals": [0.605, 0.797, 0.989, 1.181]})
     ######
     btc_eth_ch_from_peak_ratio: float = field(metadata={"intervals": [-3.689, -1.995, -0.301, 1.393]})
     btc_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-3.617, -2.242, -0.868, 0.507]})
@@ -55,6 +57,7 @@ class PointValues:
     doge_ada_ch_from_peak_ratio: float = field(metadata={"intervals": [-2.031, -1.119, -0.207, 0.705]})
     doge_sui_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.691, -0.794, 0.103, 0.999]})
     doge_xrp_ch_from_peak_ratio: float = field(metadata={"intervals": [-1.277, -0.389, 0.499, 1.386]})
+    avg_ch_from_peak_ratio: float = field(metadata={"intervals": [-0.538, -0.098, 0.342, 0.782]})
     #####
     btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
@@ -69,6 +72,7 @@ class PointValues:
     doge_trend_ch_from_peak: float = field(metadata={"intervals": [-0.042, -0.009, 0.023, 0.055]})
     xrp_trend_ch_from_peak: float = field(metadata={"intervals": [-0.036, -0.007, 0.023, 0.052]})
     sui_trend_ch_from_peak: float = field(metadata={"intervals": [-0.042, -0.011, 0.021, 0.052]})
+    avg_trend_ch_from_peak: float = field(metadata={"intervals": [-0.034, -0.01, 0.013, 0.036]})
 
 @dataclass(slots=True)
 class MarkedPoint:
@@ -367,9 +371,12 @@ def _trend_kind(symbol: str, timestamp: int) -> str:
     else:
         return "unknown"
 
+def _avg_point_values(point_values_: PointValues, attrs: tuple[str, ...]) -> float:
+    return sum([getattr(point_values_, attr) for attr in attrs]) / len(attrs)
+
 def point_values(symbol: str, timestamp: int) -> PointValues:
 
-    return PointValues(
+    point_v = PointValues(
         btc_eth_log_return_ratio=_log_return_ratio("BTCUSDT", "ETHUSDT", timestamp),
         btc_ada_log_return_ratio=_log_return_ratio("BTCUSDT", "ADAUSDT", timestamp),
         btc_doge_log_return_ratio=_log_return_ratio("BTCUSDT", "DOGEUSDT", timestamp),
@@ -380,6 +387,7 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_ada_log_return_ratio=_log_return_ratio("DOGEUSDT", "ADAUSDT", timestamp),
         doge_xrp_log_return_ratio=_log_return_ratio("DOGEUSDT", "XRPUSDT", timestamp),
         doge_sui_log_return_ratio=_log_return_ratio("DOGEUSDT", "SUIUSDT", timestamp),
+        avg_log_return_ratio=0.0,
         #############
         btc_eth_amp_ratio=_ampl_ratio("BTCUSDT", "ETHUSDT", timestamp),
         btc_ada_amp_ratio=_ampl_ratio("BTCUSDT", "ADAUSDT", timestamp),
@@ -391,6 +399,7 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_ada_amp_ratio=_ampl_ratio("DOGEUSDT", "ADAUSDT", timestamp),
         doge_xrp_amp_ratio=_ampl_ratio("DOGEUSDT", "XRPUSDT", timestamp),
         doge_sui_amp_ratio=_ampl_ratio("DOGEUSDT", "SUIUSDT", timestamp),
+        avg_ampl_ratio=0.0,
         ################
         btc_eth_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "ETHUSDT", timestamp),
         btc_ada_ch_from_peak_ratio=_trend_ch_from_peak_ratio("BTCUSDT", "ADAUSDT", timestamp),
@@ -402,6 +411,7 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_ada_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "ADAUSDT", timestamp),
         doge_xrp_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "XRPUSDT", timestamp),
         doge_sui_ch_from_peak_ratio=_trend_ch_from_peak_ratio("DOGEUSDT", "SUIUSDT", timestamp),
+        avg_ch_from_peak_ratio=0.0,
         ########
         btc_trend_kind=_trend_kind("BTCUSDT", timestamp),
         eth_trend_kind=_trend_kind("ETHUSDT", timestamp),
@@ -416,7 +426,68 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         doge_trend_ch_from_peak=_trend_ch_from_peak("DOGEUSDT", timestamp),
         xrp_trend_ch_from_peak=_trend_ch_from_peak("XRPUSDT", timestamp),
         sui_trend_ch_from_peak=_trend_ch_from_peak("SUIUSDT", timestamp),
+        avg_trend_ch_from_peak=0.0,
     )
+    point_v.avg_log_return_ratio = _avg_point_values(
+        point_v,
+        (
+            "btc_eth_log_return_ratio",
+            "btc_ada_log_return_ratio",
+            "btc_doge_log_return_ratio",
+            "btc_xrp_log_return_ratio",
+            "eth_ada_log_return_ratio",
+            "eth_doge_log_return_ratio",
+            "eth_xrp_log_return_ratio",
+            "doge_ada_log_return_ratio",
+            "doge_xrp_log_return_ratio",
+            "doge_sui_log_return_ratio",
+        )
+    )
+    
+    point_v.avg_ampl_ratio = _avg_point_values(
+        point_v,
+        (
+            "btc_eth_amp_ratio",
+            "btc_ada_amp_ratio",
+            "btc_doge_amp_ratio",
+            "btc_xrp_amp_ratio",
+            "eth_ada_amp_ratio",
+            "eth_doge_amp_ratio",
+            "eth_xrp_amp_ratio",
+            "doge_ada_amp_ratio",
+            "doge_xrp_amp_ratio",
+            "doge_sui_amp_ratio",
+        )
+    )
+
+    point_v.avg_ch_from_peak_ratio = _avg_point_values(
+        point_v,
+        (
+            "btc_eth_ch_from_peak_ratio",
+            "btc_ada_ch_from_peak_ratio",
+            "btc_doge_ch_from_peak_ratio",
+            "btc_xrp_ch_from_peak_ratio",
+            "eth_ada_ch_from_peak_ratio",
+            "eth_doge_ch_from_peak_ratio",
+            "eth_xrp_ch_from_peak_ratio",
+            "doge_ada_ch_from_peak_ratio",
+            "doge_xrp_ch_from_peak_ratio",
+            "doge_sui_ch_from_peak_ratio",
+        )
+    )
+
+    point_v.avg_trend_ch_from_peak = _avg_point_values(
+        point_v,
+        (
+            "btc_trend_ch_from_peak",
+            "eth_trend_ch_from_peak",
+            "ada_trend_ch_from_peak",
+            "doge_trend_ch_from_peak",
+            "xrp_trend_ch_from_peak",
+            "sui_trend_ch_from_peak",
+        )
+    )
+    return point_v
 
 def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     if df.empty:
@@ -607,6 +678,7 @@ def get_intervals_from_data(col_name: str, n: int, left_pct: float, right_pct: f
 
 
 def adjust_point_values():
+    v = get_intervals_from_data("avg_log_return_ratio", 5, 0.004, 0.004)
     point_values_lines = [
     f'btc_eth_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_eth_log_return_ratio", 5, 0.01, 0.01)}}})',
     f'btc_ada_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_ada_log_return_ratio", 5, 0.02, 0.02)}}})',
@@ -618,6 +690,7 @@ def adjust_point_values():
     f'doge_ada_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_ada_log_return_ratio", 5, 0.01, 0.01)}}})',
     f'doge_sui_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_sui_log_return_ratio", 5, 0.01, 0.01)}}})',
     f'doge_xrp_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_xrp_log_return_ratio", 5, 0.01, 0.01)}}})',
+    f'avg_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("avg_log_return_ratio", 5, 0.004, 0.004)}}})',
     '######',
     f'btc_eth_amp_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_eth_amp_ratio", 5, 0.01, 0.01)}}})',
     f'btc_ada_amp_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_ada_amp_ratio", 5, 0.01, 0.01)}}})',
@@ -629,6 +702,7 @@ def adjust_point_values():
     f'doge_ada_amp_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_ada_amp_ratio", 5, 0.01, 0.01)}}})',
     f'doge_sui_amp_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_sui_amp_ratio", 5, 0.01, 0.01)}}})',
     f'doge_xrp_amp_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_xrp_amp_ratio", 5, 0.01, 0.01)}}})',
+    f'avg_ampl_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("avg_ampl_ratio", 5, 0.01, 0.01)}}})',
     '######',
     f'btc_eth_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_eth_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
     f'btc_ada_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_ada_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
@@ -640,6 +714,7 @@ def adjust_point_values():
     f'doge_ada_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_ada_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
     f'doge_sui_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_sui_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
     f'doge_xrp_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("doge_xrp_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
+    f'avg_ch_from_peak_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("avg_ch_from_peak_ratio", 5, 0.01, 0.01)}}})',
     '#####',
     'btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
     'eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
@@ -654,6 +729,7 @@ def adjust_point_values():
     f'doge_trend_ch_from_peak: float = field(metadata={{"intervals": {get_intervals_from_data("doge_trend_ch_from_peak", 5, 0.01, 0.01)}}})',
     f'xrp_trend_ch_from_peak: float = field(metadata={{"intervals": {get_intervals_from_data("xrp_trend_ch_from_peak", 5, 0.01, 0.01)}}})',
     f'sui_trend_ch_from_peak: float = field(metadata={{"intervals": {get_intervals_from_data("sui_trend_ch_from_peak", 5, 0.01, 0.01)}}})',
+    f'avg_trend_ch_from_peak: float = field(metadata={{"intervals": {get_intervals_from_data("avg_trend_ch_from_peak", 5, 0.01, 0.01)}}})',
     ]
     print('\n'.join(point_values_lines))
 
