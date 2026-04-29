@@ -20,7 +20,7 @@ symbols = (
     "SUIUSDT",
 )
 
-deviation_pairs = (
+ratio_pairs = (
     ("BTCUSDT", "ETHUSDT"),
     ("BTCUSDT", "DOGEUSDT"),
     ("BTCUSDT", "ADAUSDT"),
@@ -35,9 +35,28 @@ deviation_pairs = (
     ("DOGEUSDT", "SUIUSDT"),
 )
 
+threshold_dict = {
+    "BTCUSDT": 0.012,
+    "ETHUSDT": 0.012,
+    "ADAUSDT": 0.015,
+    "BNBUSDT": 0.015,
+    "DOGEUSDT": 0.02,
+    "XRPUSDT": 0.02,
+    "AVAXUSDT": 0.02,
+    "SUIUSDT": 0.02,
+}
+
 CURRENCY_DATA_DICT = {}
-DEVIATION_K_DICT = {}
+
+LOG_RETURN_DICT = {}
+LOG_RETURN_RATIO_DICT = {}
+
+AMPL_DICT = {}
 AMPL_RATIO_DICT = {}
+
+RISE_FROM_LOW_RATIO_DICT = {}
+DROP_FROM_HIGH_RATIO_DICT = {}
+
 TREND_DICT = {}
 PEAKS_AND_TREND_DICT = {}
 
@@ -80,56 +99,85 @@ def init_currency_data_dict_from_cache(interval):
         currency_data.ohlcv_df = pd.read_csv(file_path)
 
 
-def init_deviation_k_dict():
+def init_currency_data_dict_from_online_cache(online_ohlcv_dir_, index_, range_):
+    for symbol in symbols:
+        file_path = os.path.join(online_ohlcv_dir_, f"{symbol}.csv")
+        currency_data = CurrencyData()
+        currency_data.symbol = symbol
+        CURRENCY_DATA_DICT[symbol] = currency_data
 
-    for symbol_1, symbol_2 in deviation_pairs:
+        df = pd.read_csv(file_path)
+
+        start = max(0, index_ - range_ + 1)
+        currency_data.ohlcv_df = df.iloc[start:index_ + 1].reset_index(drop=True)
+
+
+def init_log_return_dict():
+    for symbol in symbols:
+        df_symbol = CURRENCY_DATA_DICT[symbol].ohlcv_df
+        log_return_symbol = np.log(df_symbol["close"] / df_symbol["open"])
+
+        log_return_df = pd.DataFrame()
+        log_return_df["timestamp"] = df_symbol["timestamp"]
+        log_return_df["log_return"] = log_return_symbol
+
+        LOG_RETURN_DICT[symbol] = log_return_df
+
+def init_log_return_ratio_dict():
+    for symbol_1, symbol_2 in ratio_pairs:
 
         if symbol_1 not in CURRENCY_DATA_DICT:
             raise RuntimeError(f"Symbol {symbol_1} not found in CURRENCY_DATA_DICT.")
         if symbol_2 not in CURRENCY_DATA_DICT:
             raise RuntimeError(f"Symbol {symbol_2} not found in CURRENCY_DATA_DICT.")
 
-        df_symbol_1 = CURRENCY_DATA_DICT[symbol_1].ohlcv_df
-        df_symbol_2 = CURRENCY_DATA_DICT[symbol_2].ohlcv_df
+        log_return_symbol_1 = LOG_RETURN_DICT[symbol_1]
+        log_return_symbol_2 = LOG_RETURN_DICT[symbol_2]
 
-        if not df_symbol_1["timestamp"].equals(df_symbol_2["timestamp"]):
+        if not log_return_symbol_1["timestamp"].equals(log_return_symbol_2["timestamp"]):
             raise RuntimeError(f"Df for {symbol_1} and {symbol_2} have different timestamps.")
 
-        log_return_symbol_1 = np.log(df_symbol_1["close"] / df_symbol_1["open"])
-        log_return_symbol_2 = np.log(df_symbol_2["close"] / df_symbol_2["open"])
+        log_return_ratio = log_return_symbol_1["log_return"] / log_return_symbol_2["log_return"]
 
-        deviation_k = log_return_symbol_1 / log_return_symbol_2
+        log_return_ratio_df = pd.DataFrame()
+        log_return_ratio_df["timestamp"] = log_return_symbol_1["timestamp"]
+        log_return_ratio_df["log_return_ratio"] = log_return_ratio
 
-        deviation_df = pd.DataFrame()
-        deviation_df["timestamp"] = df_symbol_1["timestamp"]
-        deviation_df["deviation_k"] = deviation_k
+        LOG_RETURN_RATIO_DICT[(symbol_1, symbol_2)] = log_return_ratio_df
 
-        DEVIATION_K_DICT[(symbol_1, symbol_2)] = deviation_df
+def init_ampl_dict():
+    for symbol in symbols:
+        df_symbol = CURRENCY_DATA_DICT[symbol].ohlcv_df
+        ampl_symbol = df_symbol["high"] / df_symbol["low"] - 1
+
+        ampl_df = pd.DataFrame()
+        ampl_df["timestamp"] = df_symbol["timestamp"]
+        ampl_df["ampl"] = ampl_symbol
+
+        AMPL_DICT[symbol] = ampl_df
 
 def init_ampl_ratio_dict():
-    for symbol_1, symbol_2 in deviation_pairs:
+    for symbol_1, symbol_2 in ratio_pairs:
 
         if symbol_1 not in CURRENCY_DATA_DICT:
             raise RuntimeError(f"Symbol {symbol_1} not found in CURRENCY_DATA_DICT.")
         if symbol_2 not in CURRENCY_DATA_DICT:
             raise RuntimeError(f"Symbol {symbol_2} not found in CURRENCY_DATA_DICT.")
 
-        df_symbol_1 = CURRENCY_DATA_DICT[symbol_1].ohlcv_df
-        df_symbol_2 = CURRENCY_DATA_DICT[symbol_2].ohlcv_df
+        ampl_symbol_1 = AMPL_DICT[symbol_1]
+        ampl_symbol_2 = AMPL_DICT[symbol_2]
 
-        if not df_symbol_1["timestamp"].equals(df_symbol_2["timestamp"]):
+        if not ampl_symbol_1["timestamp"].equals(ampl_symbol_2["timestamp"]):
             raise RuntimeError(f"Df for {symbol_1} and {symbol_2} have different timestamps.")
 
-        ampl_symbol_1 = df_symbol_1["high"] / df_symbol_1["low"] - 1
-        ampl_symbol_2 = df_symbol_2["high"] / df_symbol_2["low"] - 1
-
-        ampl_ratio = ampl_symbol_1 / ampl_symbol_2
+        ampl_ratio = ampl_symbol_1["ampl"] / ampl_symbol_2["ampl"]
 
         ampl_ratio_df = pd.DataFrame()
-        ampl_ratio_df["timestamp"] = df_symbol_1["timestamp"]
+        ampl_ratio_df["timestamp"] = ampl_symbol_1["timestamp"]
         ampl_ratio_df["ampl_ratio"] = ampl_ratio
 
         AMPL_RATIO_DICT[(symbol_1, symbol_2)] = ampl_ratio_df
+
 
 def init_trend_dict(save_to_file=True):
 
@@ -173,9 +221,55 @@ def init_trend_dict_from_cache():
 def init_peaks_and_trend_dict():
     print(">>> init peaks and trend dict...")
     start = time.time()
+
     for symbol in symbols:
         symbol_df = CURRENCY_DATA_DICT[symbol].ohlcv_df
-        peaks_and_trend_dict = mark.detect_peaks(symbol_df)
+        threshold = threshold_dict.get(symbol) or 0.02
+        peaks_and_trend_dict = mark.detect_peaks(symbol_df, threshold=threshold)
         PEAKS_AND_TREND_DICT[symbol] = peaks_and_trend_dict
     end = time.time()
     print(f">>> elapsed time: {end - start} seconds.")
+
+def init_rise_from_low_ratio_dict():
+    for symbol_1, symbol_2 in ratio_pairs:
+
+        if symbol_1 not in CURRENCY_DATA_DICT:
+            raise RuntimeError(f"Symbol {symbol_1} not found in CURRENCY_DATA_DICT.")
+        if symbol_2 not in CURRENCY_DATA_DICT:
+            raise RuntimeError(f"Symbol {symbol_2} not found in CURRENCY_DATA_DICT.")
+
+        peaks_and_trend_symbol_1 = PEAKS_AND_TREND_DICT[symbol_1]
+        peaks_and_trend_symbol_2 = PEAKS_AND_TREND_DICT[symbol_2]
+
+        if not peaks_and_trend_symbol_1["timestamp"].equals(peaks_and_trend_symbol_2["timestamp"]):
+            raise RuntimeError(f"Df for {symbol_1} and {symbol_2} have different timestamps.")
+
+        rise_from_low_ratio = peaks_and_trend_symbol_1["rise_from_low"] / peaks_and_trend_symbol_2["rise_from_low"]
+
+        rise_from_low_ratio_df = pd.DataFrame()
+        rise_from_low_ratio_df["timestamp"] = peaks_and_trend_symbol_1["timestamp"]
+        rise_from_low_ratio_df["rise_from_low_ratio"] = rise_from_low_ratio
+
+        RISE_FROM_LOW_RATIO_DICT[(symbol_1, symbol_2)] = rise_from_low_ratio_df
+
+def init_drop_from_high_ratio_dict():
+    for symbol_1, symbol_2 in ratio_pairs:
+
+        if symbol_1 not in CURRENCY_DATA_DICT:
+            raise RuntimeError(f"Symbol {symbol_1} not found in CURRENCY_DATA_DICT.")
+        if symbol_2 not in CURRENCY_DATA_DICT:
+            raise RuntimeError(f"Symbol {symbol_2} not found in CURRENCY_DATA_DICT.")
+
+        peaks_and_trend_symbol_1 = PEAKS_AND_TREND_DICT[symbol_1]
+        peaks_and_trend_symbol_2 = PEAKS_AND_TREND_DICT[symbol_2]
+
+        if not peaks_and_trend_symbol_1["timestamp"].equals(peaks_and_trend_symbol_2["timestamp"]):
+            raise RuntimeError(f"Df for {symbol_1} and {symbol_2} have different timestamps.")
+
+        drop_from_high_ratio = peaks_and_trend_symbol_1["drop_from_high"] / peaks_and_trend_symbol_2["drop_from_high"]
+
+        drop_from_high_ratio_df = pd.DataFrame()
+        drop_from_high_ratio_df["timestamp"] = peaks_and_trend_symbol_1["timestamp"]
+        drop_from_high_ratio_df["drop_from_high_ratio"] = drop_from_high_ratio
+
+        DROP_FROM_HIGH_RATIO_DICT[(symbol_1, symbol_2)] = drop_from_high_ratio_df
