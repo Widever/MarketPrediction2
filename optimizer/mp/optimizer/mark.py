@@ -33,15 +33,15 @@ class PointValues:
     doge_ada_log_return_ratio: float = field(metadata={"intervals": [1.569, 2.868, 4.166, 5.465]})
     doge_sui_log_return_ratio: float = field(metadata={"intervals": [-0.623, 1.209, 3.042, 4.875]})
     doge_xrp_log_return_ratio: float = field(metadata={"intervals": [-1.226, -0.33, 0.566, 1.462]})
-    avg_log_return_ratio: float = field(metadata={"intervals": [0.468, 0.562, 0.655, 0.749]})
+    avg_log_return_ratio: float = field(metadata={"intervals": [-3.555, -0.767, 2.021, 4.809]})
     ######
-    btc_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    eth_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ada_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    doge_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    xrp_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    sui_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    avg_log_return: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
+    btc_log_return: float = field(metadata={"intervals": [-0.003, -0.001, 0.001, 0.002]})
+    eth_log_return: float = field(metadata={"intervals": [-0.003, -0.001, 0.001, 0.003]})
+    ada_log_return: float = field(metadata={"intervals": [-0.004, -0.001, 0.002, 0.005]})
+    doge_log_return: float = field(metadata={"intervals": [-0.005, -0.002, 0.002, 0.005]})
+    xrp_log_return: float = field(metadata={"intervals": [-0.004, -0.001, 0.002, 0.004]})
+    sui_log_return: float = field(metadata={"intervals": [-0.005, -0.001, 0.002, 0.005]})
+    avg_log_return: float = field(metadata={"intervals": [-0.004, -0.001, 0.001, 0.004]})
     ######
     btc_eth_ampl_ratio: float = field(metadata={"intervals": [0.39, 0.676, 0.963, 1.249]})
     btc_ada_ampl_ratio: float = field(metadata={"intervals": [0.305, 0.557, 0.808, 1.06]})
@@ -55,54 +55,54 @@ class PointValues:
     doge_xrp_ampl_ratio: float = field(metadata={"intervals": [1.046, 1.701, 2.356, 3.011]})
     avg_ampl_ratio: float = field(metadata={"intervals": [0.605, 0.797, 0.989, 1.181]})
     ######
-    btc_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    eth_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ada_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    doge_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    xrp_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    sui_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    avg_ampl: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
+    btc_ampl: float = field(metadata={"intervals": [0.002, 0.003, 0.005, 0.006]})
+    eth_ampl: float = field(metadata={"intervals": [0.002, 0.004, 0.006, 0.008]})
+    ada_ampl: float = field(metadata={"intervals": [0.004, 0.006, 0.009, 0.012]})
+    doge_ampl: float = field(metadata={"intervals": [0.003, 0.006, 0.009, 0.011]})
+    xrp_ampl: float = field(metadata={"intervals": [0.003, 0.006, 0.008, 0.011]})
+    sui_ampl: float = field(metadata={"intervals": [0.004, 0.007, 0.01, 0.013]})
+    avg_ampl: float = field(metadata={"intervals": [0.003, 0.005, 0.007, 0.01]})
     ######
-    btc_eth_drop_from_high_ratio: float = field(metadata={"intervals": [-3.689, -1.995, -0.301, 1.393]})
-    btc_ada_drop_from_high_ratio: float = field(metadata={"intervals": [-3.617, -2.242, -0.868, 0.507]})
-    btc_doge_drop_from_high_ratio: float = field(metadata={"intervals": [-3.816, -2.268, -0.72, 0.828]})
-    btc_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [-3.48, -1.974, -0.469, 1.037]})
-    eth_ada_drop_from_high_ratio: float = field(metadata={"intervals": [-1.563, -0.741, 0.082, 0.904]})
-    eth_doge_drop_from_high_ratio: float = field(metadata={"intervals": [-2.09, -1.197, -0.303, 0.59]})
-    eth_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [-2.18, -1.169, -0.158, 0.853]})
-    doge_ada_drop_from_high_ratio: float = field(metadata={"intervals": [-2.031, -1.119, -0.207, 0.705]})
-    doge_sui_drop_from_high_ratio: float = field(metadata={"intervals": [-1.691, -0.794, 0.103, 0.999]})
-    doge_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [-1.277, -0.389, 0.499, 1.386]})
-    avg_drop_from_high_ratio: float = field(metadata={"intervals": [-0.538, -0.098, 0.342, 0.782]})
+    btc_eth_drop_from_high_ratio: float = field(metadata={"intervals": [2.162, 4.21, 6.258, 8.306]})
+    btc_ada_drop_from_high_ratio: float = field(metadata={"intervals": [1.57, 3.065, 4.56, 6.055]})
+    btc_doge_drop_from_high_ratio: float = field(metadata={"intervals": [1.191, 2.326, 3.461, 4.596]})
+    btc_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [1.144, 2.235, 3.327, 4.418]})
+    eth_ada_drop_from_high_ratio: float = field(metadata={"intervals": [1.101, 2.114, 3.126, 4.139]})
+    eth_doge_drop_from_high_ratio: float = field(metadata={"intervals": [0.802, 1.55, 2.298, 3.047]})
+    eth_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [0.954, 1.857, 2.76, 3.662]})
+    doge_ada_drop_from_high_ratio: float = field(metadata={"intervals": [2.71, 5.219, 7.729, 10.238]})
+    doge_sui_drop_from_high_ratio: float = field(metadata={"intervals": [1.948, 3.771, 5.593, 7.416]})
+    doge_xrp_drop_from_high_ratio: float = field(metadata={"intervals": [1.555, 3.01, 4.465, 5.919]})
+    avg_drop_from_high_ratio: float = field(metadata={"intervals": [1.17, 1.921, 2.672, 3.424]})
     #####
-    btc_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    eth_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ada_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    doge_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    xrp_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    sui_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    avg_drop_from_high: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ######
-    btc_eth_rise_from_low_ratio: float = field(metadata={"intervals": [-3.689, -1.995, -0.301, 1.393]})
-    btc_ada_rise_from_low_ratio: float = field(metadata={"intervals": [-3.617, -2.242, -0.868, 0.507]})
-    btc_doge_rise_from_low_ratio: float = field(metadata={"intervals": [-3.816, -2.268, -0.72, 0.828]})
-    btc_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [-3.48, -1.974, -0.469, 1.037]})
-    eth_ada_rise_from_low_ratio: float = field(metadata={"intervals": [-1.563, -0.741, 0.082, 0.904]})
-    eth_doge_rise_from_low_ratio: float = field(metadata={"intervals": [-2.09, -1.197, -0.303, 0.59]})
-    eth_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [-2.18, -1.169, -0.158, 0.853]})
-    doge_ada_rise_from_low_ratio: float = field(metadata={"intervals": [-2.031, -1.119, -0.207, 0.705]})
-    doge_sui_rise_from_low_ratio: float = field(metadata={"intervals": [-1.691, -0.794, 0.103, 0.999]})
-    doge_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [-1.277, -0.389, 0.499, 1.386]})
-    avg_rise_from_low_ratio: float = field(metadata={"intervals": [-0.538, -0.098, 0.342, 0.782]})
+    btc_drop_from_high: float = field(metadata={"intervals": [0.008, 0.016, 0.024, 0.032]})
+    eth_drop_from_high: float = field(metadata={"intervals": [0.008, 0.015, 0.021, 0.028]})
+    ada_drop_from_high: float = field(metadata={"intervals": [0.013, 0.025, 0.037, 0.048]})
+    doge_drop_from_high: float = field(metadata={"intervals": [0.016, 0.031, 0.045, 0.06]})
+    xrp_drop_from_high: float = field(metadata={"intervals": [0.014, 0.027, 0.04, 0.053]})
+    sui_drop_from_high: float = field(metadata={"intervals": [0.017, 0.031, 0.045, 0.06]})
+    avg_drop_from_high: float = field(metadata={"intervals": [0.012, 0.021, 0.03, 0.039]})
     #####
-    btc_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    eth_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ada_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    doge_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    xrp_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    sui_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    avg_rise_from_low: float = field(metadata={"intervals": [-1.14, -0.129, 0.882, 1.894]})
-    ######
+    btc_eth_rise_from_low_ratio: float = field(metadata={"intervals": [2.24, 4.374, 6.508, 8.641]})
+    btc_ada_rise_from_low_ratio: float = field(metadata={"intervals": [1.811, 3.541, 5.27, 6.999]})
+    btc_doge_rise_from_low_ratio: float = field(metadata={"intervals": [1.231, 2.406, 3.58, 4.755]})
+    btc_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [1.496, 2.94, 4.384, 5.828]})
+    eth_ada_rise_from_low_ratio: float = field(metadata={"intervals": [1.393, 2.69, 3.987, 5.284]})
+    eth_doge_rise_from_low_ratio: float = field(metadata={"intervals": [0.877, 1.699, 2.521, 3.344]})
+    eth_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [1.262, 2.472, 3.681, 4.891]})
+    doge_ada_rise_from_low_ratio: float = field(metadata={"intervals": [2.957, 5.725, 8.493, 11.261]})
+    doge_sui_rise_from_low_ratio: float = field(metadata={"intervals": [2.327, 4.537, 6.747, 8.958]})
+    doge_xrp_rise_from_low_ratio: float = field(metadata={"intervals": [2.314, 4.525, 6.737, 8.948]})
+    avg_rise_from_low_ratio: float = field(metadata={"intervals": [1.352, 2.251, 3.15, 4.049]})
+    #####
+    btc_rise_from_low: float = field(metadata={"intervals": [0.011, 0.02, 0.03, 0.039]})
+    eth_rise_from_low: float = field(metadata={"intervals": [0.01, 0.017, 0.025, 0.033]})
+    ada_rise_from_low: float = field(metadata={"intervals": [0.014, 0.026, 0.039, 0.051]})
+    doge_rise_from_low: float = field(metadata={"intervals": [0.02, 0.038, 0.056, 0.074]})
+    xrp_rise_from_low: float = field(metadata={"intervals": [0.018, 0.035, 0.052, 0.069]})
+    sui_rise_from_low: float = field(metadata={"intervals": [0.02, 0.037, 0.055, 0.072]})
+    avg_rise_from_low: float = field(metadata={"intervals": [0.013, 0.023, 0.033, 0.043]})
+    #####
     btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
     ada_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
@@ -863,7 +863,9 @@ def get_intervals_from_data(col_name: str, n: int, left_pct: float, right_pct: f
 
 
 def adjust_point_values():
-    v = get_intervals_from_data("avg_log_return_ratio", 5, 0.004, 0.004)
+    # v = get_intervals_from_data("avg_log_return", 5, 0.01, 0.01)
+    # print(v)
+    # return
     point_values_lines = [
     f'btc_eth_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_eth_log_return_ratio", 5, 0.01, 0.01)}}})',
     f'btc_ada_log_return_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_ada_log_return_ratio", 5, 0.02, 0.02)}}})',
@@ -883,6 +885,7 @@ def adjust_point_values():
     f'doge_log_return: float = field(metadata={{"intervals": {get_intervals_from_data("doge_log_return", 5, 0.01, 0.01)}}})',
     f'xrp_log_return: float = field(metadata={{"intervals": {get_intervals_from_data("xrp_log_return", 5, 0.01, 0.01)}}})',
     f'sui_log_return: float = field(metadata={{"intervals": {get_intervals_from_data("sui_log_return", 5, 0.01, 0.01)}}})',
+    f'avg_log_return: float = field(metadata={{"intervals": {get_intervals_from_data("avg_log_return", 5, 0.01, 0.01)}}})',
     '######',
     f'btc_eth_ampl_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_eth_ampl_ratio", 5, 0.01, 0.01)}}})',
     f'btc_ada_ampl_ratio: float = field(metadata={{"intervals": {get_intervals_from_data("btc_ada_ampl_ratio", 5, 0.01, 0.01)}}})',
