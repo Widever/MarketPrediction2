@@ -33,7 +33,7 @@ def comb_grade_worker(comb, selected_combs):
 def grade_combs_parallel(all_combs, selected_combs):
     global _train_df
     # workers = cpu_count() - 2  # або cpu_count() - 1
-    workers = 1  # або cpu_count() - 1
+    workers = cpu_count() - 2  # або cpu_count() - 1
     total = len(all_combs)
 
     report_every = 10_000

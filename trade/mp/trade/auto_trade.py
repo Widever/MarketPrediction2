@@ -32,7 +32,7 @@ _file_logger = Logger()
 
 
 
-def update_runtime_data(interval):
+def update_runtime_data(interval, online_ohlc_dir_, index_, range_,):
 
     now_dt = dt.datetime.now()
     two_days_ago = now_dt - dt.timedelta(days=2)
@@ -40,9 +40,15 @@ def update_runtime_data(interval):
     upper_bound_timestamp = int(now_dt.timestamp() * 1000)
 
     data.init_currency_data_dict(interval, lower_bound_timestamp, upper_bound_timestamp, save_to_file=False)
-    data.init_deviation_k_dict()
+    # data.init_currency_data_dict_from_online_cache(online_ohlc_dir_, index_, range_)
+
+    data.init_log_return_dict()
+    data.init_log_return_ratio_dict()
+    data.init_ampl_dict()
     data.init_ampl_ratio_dict()
     data.init_peaks_and_trend_dict()
+    data.init_drop_from_high_ratio_dict()
+    data.init_rise_from_low_ratio_dict()
 
 
 def validate_runtime_data():
@@ -106,6 +112,9 @@ def schedule():
     online_ohlcv_dir = os.path.join(data_dir, f"online_data_{interval}")
     os.makedirs(online_ohlcv_dir, exist_ok=True)
 
+    index = 100
+    last_index = 600
+    range_ = 96
     while True:
         try:
             current_price = get_current_price(client, symbol)
@@ -125,7 +134,13 @@ def schedule():
             _file_logger.write(f"Update data and check combs. now={dt.datetime.now().isoformat()}.")
 
             start_time = time.time()
-            update_runtime_data(interval)
+
+            update_runtime_data(interval, online_ohlcv_dir, index, range_)
+
+            index += 1
+            # if index >= last_index:
+            #     break
+
             validate_runtime_data()
             end_time = time.time()
 
@@ -181,6 +196,7 @@ def schedule():
             traceback.print_exception(e)
             _file_logger.write(f"---- {repr(e)}")
             wait_until_next_interval(interval_mins, min_gap_mins)
+            # time.sleep(0.1)
 
 
 if __name__ == "__main__":
