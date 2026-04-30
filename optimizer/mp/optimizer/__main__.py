@@ -128,17 +128,17 @@ if __name__ == '__main__':
     data.init_currency_data_dict_from_cache("5m")
     # data.init_currency_data_dict("5m")
 
-    data.init_log_return_dict()
-    data.init_log_return_ratio_dict()
-    data.init_ampl_dict()
-    data.init_ampl_ratio_dict()
-    data.init_peaks_and_trend_dict()
-    data.init_drop_from_high_ratio_dict()
-    data.init_rise_from_low_ratio_dict()
+    # data.init_log_return_dict()
+    # data.init_log_return_ratio_dict()
+    # data.init_ampl_dict()
+    # data.init_ampl_ratio_dict()
+    # data.init_peaks_and_trend_dict()
+    # data.init_drop_from_high_ratio_dict()
+    # data.init_rise_from_low_ratio_dict()
 
-    check_currency_data_dict()
-    check_deviation_k_dict()
-    check_ampl_ratio_dict()
+    # check_currency_data_dict()
+    # check_deviation_k_dict()
+    # check_ampl_ratio_dict()
 
     # series = pd.Series(mark._trend_value_ratio("DOGEUSDT", "XRPUSDT", timestamp) for timestamp in data.CURRENCY_DATA_DICT["BTCUSDT"].ohlcv_df["timestamp"])
     # pd.set_option("display.max_rows", 500)
@@ -162,10 +162,10 @@ if __name__ == '__main__':
     # series = series[series <= 3]
     # plot_series_histogram(series, bins=20)
 
-    mark.mark_data()
-    mark.split_marked_data()
+    # mark.mark_data()
+    # mark.split_marked_data()
 
-    f_name = "options_stats/exp_29-04_peak_down_0.txt"
+    f_name = "options_stats/exp_30-04_peak_down_3.txt"
     # options = generate_grid_options(
     #     l_values=[25],
     #     end_step=50,  # грубіший grid
@@ -190,15 +190,15 @@ if __name__ == '__main__':
     ]
     # options = random.sample(options, 50)
 
-    # print(str(options).replace("},", "},\n"))
-    # for option in options:
-    #     optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
-    #
-    #     if optimal_combs:
-    #         intervals_stat, total_count, total_sl_count, total_k = benchmark.super_benchmark(optimal_combs)
-    #     else:
-    #         intervals_stat, total_count, total_sl_count, total_k = ("empty", 0, 0, 0)
-    #
-    #     write_stat(f_name, option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k)
+    print(str(options).replace("},", "},\n"))
+    for option in options:
+        optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
+
+        if optimal_combs:
+            intervals_stat, total_count, total_sl_count, total_k = benchmark.super_benchmark(optimal_combs)
+        else:
+            intervals_stat, total_count, total_sl_count, total_k = ("empty", 0, 0, 0)
+
+        write_stat(f_name, option, optimal_combs, intervals_stat, total_count, total_sl_count, total_k)
 
     # mark.adjust_point_values()

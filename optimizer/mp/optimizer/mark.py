@@ -103,13 +103,6 @@ class PointValues:
     sui_rise_from_low: float = field(metadata={"intervals": [0.02, 0.037, 0.055, 0.072]})
     avg_rise_from_low: float = field(metadata={"intervals": [0.013, 0.023, 0.033, 0.043]})
     #####
-    btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    ada_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    doge_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    xrp_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    sui_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})
-    #####
 
 @dataclass(slots=True)
 class MarkedPoint:
@@ -123,15 +116,11 @@ class MarkedPoint:
     sl: bool = False
     scope: int = 0
 
-    rising: bool = False
-    falling: bool = False
-    flat: bool = False
     peak_up: bool = False
     peak_down: bool = False
     change_from_last_peak: float = 0.0
     len_from_last_peak: float = 0
-    ampl: float = 0.0
-
+    last_peak_type: str = None
 
 
 class PriceTrend(IntEnum):
@@ -442,22 +431,6 @@ def _trend_ch_from_peak(symbol: str, timestamp: int) -> float:
 
     return values[idx == timestamp][0]
 
-def _trend_kind(symbol: str, timestamp: int) -> str:
-    trend_df = data.PEAKS_AND_TREND_DICT[symbol]
-    idx = trend_df["timestamp"].values
-    rising = trend_df["rising"].values[idx == timestamp][0]
-    flat = trend_df["flat"].values[idx == timestamp][0]
-    falling = trend_df["falling"].values[idx == timestamp][0]
-    
-    if rising:
-        return "rising"
-    elif flat:
-        return "flat"
-    elif falling:
-        return "falling"
-    else:
-        return "unknown"
-
 def _avg_point_values(point_values_: PointValues, attrs: tuple[str, ...]) -> float:
     values = [getattr(point_values_, attr) for attr in attrs]
     values = np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
@@ -546,13 +519,6 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
         xrp_rise_from_low=_rise_from_low("XRPUSDT", timestamp),
         sui_rise_from_low=_rise_from_low("SUIUSDT", timestamp),
         avg_rise_from_low=0.0,
-        #######
-        btc_trend_kind=_trend_kind("BTCUSDT", timestamp),
-        eth_trend_kind=_trend_kind("ETHUSDT", timestamp),
-        ada_trend_kind=_trend_kind("ADAUSDT", timestamp),
-        doge_trend_kind=_trend_kind("DOGEUSDT", timestamp),
-        xrp_trend_kind=_trend_kind("XRPUSDT", timestamp),
-        sui_trend_kind=_trend_kind("SUIUSDT", timestamp),
     )
     
     point_v.avg_log_return_ratio = _avg_point_values(
@@ -669,19 +635,59 @@ def point_values(symbol: str, timestamp: int) -> PointValues:
     
     return point_v
 
+def detect_trends(peaks_df: pd.DataFrame) -> pd.DataFrame:
+    result = peaks_df.copy().reset_index(drop=True)
+
+    result["change_from_last_peak"] = 0.0
+    result["len_from_last_peak"] = 0.0
+    result["last_peak_type"] = None
+
+    last_peak_price = None
+    last_peak_idx = None
+    last_peak_type = None
+
+    for i in range(1, len(result)):
+        low = result.iloc[i]["low"]
+        high = result.iloc[i]["high"]
+
+        if last_peak_price is not None:
+            if last_peak_type == "up":
+                change_from_last_peak = (last_peak_price - low) / last_peak_price
+            elif last_peak_type == "down":
+                change_from_last_peak = (high - last_peak_price) / last_peak_price
+            else:
+                raise ValueError("Unknown type")
+
+            result.loc[i, "change_from_last_peak"] = change_from_last_peak
+            result.loc[i, "len_from_last_peak"] = i - last_peak_idx
+            result.loc[i, "last_peak_type"] = last_peak_type
+        else:
+            result.loc[i, "change_from_last_peak"] = 0.0
+            result.loc[i, "len_from_last_peak"] = 0
+            result.loc[i, "last_peak_type"] = None
+
+        peak_up = result.iloc[i]["peak_up"]
+        peak_down = result.iloc[i]["peak_down"]
+
+        if peak_up:
+            last_peak_price = high
+            last_peak_idx = i
+            last_peak_type = "up"
+        elif peak_down:
+            last_peak_price = low
+            last_peak_idx = i
+            last_peak_type = "down"
+
+    return result
+
 def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     if df.empty:
         return df.copy()
 
     result = df.copy().reset_index(drop=True)
 
-    result["rising"] = False
-    result["falling"] = False
-    result["flat"] = False
     result["peak_up"] = False
     result["peak_down"] = False
-    result["change_from_last_peak"] = 0.0
-    result["len_from_last_peak"] = 0.0
     result["drop_from_high"] = 0.0
     result["rise_from_low"] = 0.0
 
@@ -692,13 +698,9 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     last_high_idx = 0
     last_low_idx = 0
 
-    last_peak_price = None
-    last_peak_idx = None
-
     for i in range(1, len(result)):
         high = result.iloc[i]["high"]
         low = result.iloc[i]["low"]
-        close = result.iloc[i]["close"]
 
         # Оновлюємо екстремуми
         if high > last_high:
@@ -718,8 +720,6 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
         # Падіння більше threshold → фіксуємо peak_up
         if drop_from_high >= threshold and trend != PriceTrend.DOWN:
             result.loc[last_high_idx, "peak_up"] = True
-            last_peak_price = last_high
-            last_peak_idx = last_high_idx
             trend = PriceTrend.DOWN
 
             last_low = low
@@ -728,31 +728,12 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
         # Ріст більше threshold → фіксуємо peak_down
         elif rise_from_low >= threshold and trend != PriceTrend.UP:
             result.loc[last_low_idx, "peak_down"] = True
-            last_peak_price = last_low
-            last_peak_idx = last_low_idx
             trend = PriceTrend.UP
 
             last_high = high
             last_high_idx = i
 
-        # Тренд/flat
-        if drop_from_high < threshold and rise_from_low < threshold:
-            result.loc[i, "flat"] = True
-            trend = PriceTrend.FLAT
-        elif trend == PriceTrend.UP:
-            result.loc[i, "rising"] = True
-        elif trend == PriceTrend.DOWN:
-            result.loc[i, "falling"] = True
-
-        # Зміна від останнього піку
-        if last_peak_price is not None:
-            change_from_last_peak = (low - last_peak_price) / last_peak_price
-            result.loc[i, "change_from_last_peak"] = change_from_last_peak
-            result.loc[i, "len_from_last_peak"] = i - last_peak_idx
-        else:
-            result.loc[i, "change_from_last_peak"] = 0.0
-            result.loc[i, "len_from_last_peak"] = 0
-
+    result = detect_trends(result)
     return result
 
 def mark_data():
@@ -806,15 +787,12 @@ def mark_data():
             values=point_values_,
             sl_price_limit=sl_limit_price,
             sell_price_limit=sell_limit_price,
-            
-            rising=row["rising"],
-            falling=row["falling"],
-            flat=row["flat"],
+
             peak_up=row["peak_up"],
             peak_down=row["peak_down"],
             change_from_last_peak=row["change_from_last_peak"],
             len_from_last_peak=row["len_from_last_peak"],
-            ampl=ampl
+            last_peak_type=row["last_peak_type"],
         )
         opened_points.append(new_opened_marked_point)
 
@@ -946,13 +924,6 @@ def adjust_point_values():
     f'xrp_rise_from_low: float = field(metadata={{"intervals": {get_intervals_from_data("xrp_rise_from_low", 5, 0.01, 0.01)}}})',
     f'sui_rise_from_low: float = field(metadata={{"intervals": {get_intervals_from_data("sui_rise_from_low", 5, 0.01, 0.01)}}})',
     f'avg_rise_from_low: float = field(metadata={{"intervals": {get_intervals_from_data("avg_rise_from_low", 5, 0.01, 0.01)}}})',
-    '#####',
-    'btc_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
-    'eth_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
-    'ada_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
-    'doge_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
-    'xrp_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
-    'sui_trend_kind: str = field(metadata={"enum": ["rising", "falling", "flat"]})',
     ]
     print('\n'.join(point_values_lines))
 

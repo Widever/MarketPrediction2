@@ -2,7 +2,9 @@ import dataclasses
 import itertools
 import math
 import os
+import random
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Self
 
@@ -157,26 +159,27 @@ def _comb_uniformity_2(comb_df, timestamp_range):
 
 def profit_loss_in_df(comb_df):
     # Peak down
-    # profit = len(
-    #     comb_df[
-    #         (comb_df["peak_down"]) &
-    #         (~comb_df["peak_up"]) &
-    #         # (comb_df["change_from_last_peak"] > -0.03)
-    #         # (comb_df["len_from_last_peak"] > 30)
-    #         (comb_df["avg_log_return_ratio"] < 0.5)
-    #     ]
-    # )
-
-    # Middle rising
     profit = len(
         comb_df[
-            (comb_df["rising"]) &
-            (~comb_df["peak_up"]) &
-            (comb_df["change_from_last_peak"] < 0.03) &
-            (comb_df["len_from_last_peak"] < 20) &
-            (comb_df["avg_log_return_ratio"] < 0.5)
-            ]
+            (comb_df["peak_down"]) &
+            (~comb_df["peak_up"])
+            # (comb_df["change_from_last_peak"] < -0.025)
+            # (comb_df["len_from_last_peak"] > 30)
+            # (comb_df["avg_log_return"] < -0.00)
+        ]
     )
+
+    # Middle rising
+    # profit = len(
+    #     comb_df[
+    #         (comb_df["ada_rise_from_low"] > 0.02) &
+    #         # (comb_df["rising"]) &
+    #         # (~comb_df["peak_up"]) &
+    #         # (comb_df["change_from_last_peak"] < 0.03) &
+    #         # (comb_df["len_from_last_peak"] < 20)
+    #         (comb_df["avg_log_return_ratio"] < 0)
+    #     ]
+    # )
     loss = len(comb_df) - profit
     return profit, loss
 
@@ -250,7 +253,7 @@ def choose_comb(train_marked_points_df: pd.DataFrame, verify_marked_points_df: p
         # min_comb_count_ = 2000 * math.exp(-0.5 * x) + 0
         min_comb_count_ = start_c - (start_c - end_c) / l * x
 
-        if comb_grade.props["profit"] < min_comb_count_:
+        if comb_grade.props["profit"] < end_c:
             continue
 
         # if comb_grade.uniformity2 < 0.0:
@@ -309,6 +312,28 @@ def tag_to_field(tag: str) -> str:
 
     raise RuntimeError(f"Tag {tag} is unknown field.")
 
+
+def generate_combinations(attr_lists, m):
+    result = []
+
+    list_combinations = list(itertools.combinations(attr_lists, m))
+
+    if len(list_combinations) > 50:
+        list_combinations = random.sample(list_combinations, 50)
+
+    print(f"List combinations len: {len(list_combinations)}")
+
+    # вибираємо m списків із n
+    for selected_lists in list_combinations:
+        # беремо по одному атрибуту з кожного вибраного списку
+        for combo in itertools.product(*selected_lists):
+            result.append(combo)
+
+    if len(result) > 100000:
+        result = random.sample(result, 100000)
+
+    return result
+
 def optimal_combs(limit_comb_n=10, selected_combs=None, start_c=None, end_c=None, l=None) -> list[CombGrade]:
     full_time_start = time.time()
 
@@ -319,31 +344,15 @@ def optimal_combs(limit_comb_n=10, selected_combs=None, start_c=None, end_c=None
     print(f"Full df len: {len(train_marked_points_df)}")
 
     tags = [x for x in train_marked_points_df.columns if x.startswith("#tag_")]
-    # combinations = list(itertools.combinations(tags, 1))
-    # combinations += list(itertools.combinations(tags, 2))
-    # combinations += list(itertools.combinations(tags, 3))
-    # combinations += list(itertools.combinations(tags, 4))
-    # combinations += list(itertools.combinations(tags, 5))
 
-    # dict_of_field_tags = {}
-    # f_names = [f.name for f in dataclasses.fields(PointValues)]
-    # f_names = [x for x in f_names if x not in ("btc_price_up", "all_same_price_dir", "ada_price_up")]
+    tags_by_field = defaultdict(list)
+    for tag in tags:
+        tag_field = tag_to_field(tag)
+        tags_by_field[tag_field].append(tag)
 
-    # for f_name in f_names:
-    #     field_tags = [x for x in tags if x.startswith(f"#tag_{f_name}")]
-    #     dict_of_field_tags[f_name] = field_tags
-    #
-    # field_combs = []
-    # field_combs += list(itertools.combinations(f_names, 4))
-    # field_combs += list(itertools.combinations(f_names, 5))
-    #
-    # combinations = []
-    # for field_comb in field_combs:
-    #     list_of_field_tags = [dict_of_field_tags[f] for f in field_comb]
-    #     combinations += list(itertools.product(*list_of_field_tags))
-
-    start_combs: list[tuple[str, ...]] = list(itertools.combinations(tags, 1))
-    combs: list[tuple[str, ...]] = start_combs
+    attr_lists = list(tags_by_field.values())
+    print(f"Tags by field len: {len(attr_lists)}")
+    combs = generate_combinations(attr_lists, 5)
 
     print(f"All combs len: {len(combs)}")
 
@@ -361,16 +370,7 @@ def optimal_combs(limit_comb_n=10, selected_combs=None, start_c=None, end_c=None
             comb_grade = choose_comb(train_marked_points_df, verify_marked_points_df, combs, selected_combs,
                                           interval_bins, start_c, end_c, l)
 
-            if len(comb_grade.comb) < l:
-
-                filled_fields = {tag_to_field(x) for x in comb_grade.comb}
-                remaining_tags = [x for x in tags if tag_to_field(x) not in filled_fields]
-                new_combs = [(*comb_grade.comb, x) for x in remaining_tags]
-                combs = new_combs
-                continue
-
             selected_combs.append(comb_grade)
-            combs = start_combs
 
             print("Chosen comb:")
             print(comb_grade)
