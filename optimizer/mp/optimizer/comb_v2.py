@@ -2,15 +2,16 @@ import dataclasses
 import math
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, Counter
 from dataclasses import dataclass
 from typing import Self, Iterable, Generator
 
 import itertools
 import numpy as np
 import pandas as pd
-
+import random
 from mp.optimizer.mark import PointValues
+from mp.optimizer.parallel_reduce_combs import grade_combs_parallel_cpu
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
@@ -20,9 +21,9 @@ _train_df = None
 @dataclass(slots=True)
 class CombGrade:
     comb: tuple[str, ...] | None = None
-    score: float = 0.0
-    props: dict = dataclasses.field(default_factory=dict)
-    verify_grade: Self | None = None
+    bayesian_winrate: float = 0.0
+    profit: int = 0
+    total: int = 0
 
 def get_select_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
     n = len(marked_points_df)
@@ -117,26 +118,33 @@ def tag_to_field(tag: str) -> str:
 # def tag_to_field(tag: str) -> str:
 #     return tag.split("_")[0]
 
-def get_deeper_combs(combs: Generator[list[tuple[str, ...]], None, None], tags: list[str], batch_size: int) -> Generator[list[tuple[str, ...]], None, None]:
-    tag_index = {tag: i for i, tag in enumerate(tags)}
-    tag_to_field_dict = {tag: tag_to_field(tag) for tag in tags}
+def build_deeper_combs(combs: list[tuple[str, ...]], tags: list[str]) -> list[tuple[str, ...]]:
 
-    deeper_combs = []
-    for combs_batch in combs:
-        for comb in combs_batch:
-            filled_fields = {tag_to_field_dict[x] for x in comb}
-            last_index = max(tag_index[x] for x in comb)  # <-- key change
-            remaining_tags = [
-                x for x in tags
-                if tag_to_field_dict[x] not in filled_fields and tag_index[x] > last_index
-            ]
-            deeper_combs.extend((*comb, x) for x in remaining_tags)
-            if len(deeper_combs) > batch_size:
-                yield deeper_combs
-                deeper_combs = []
+    if not combs:
+        return [(tag,) for tag in tags]
 
-    yield deeper_combs
-    return None
+    # Precompute fields for all tags once
+    tag_fields = [(tag, tag_to_field(tag)) for tag in tags]
+
+    result = []
+    for comb in combs:
+        used_fields = {tag_to_field(tag) for tag in comb}
+        for tag, field in tag_fields:
+            if field not in used_fields:
+                result.append(comb + (tag,))
+    return result
+
+
+def count_deeper_combs(combs: list[tuple[str, ...]], tags: list[str]) -> int:
+    field_tag_counts = Counter(tag_to_field(tag) for tag in tags)
+
+    total = 0
+    for c in combs:
+        used_fields = {tag_to_field(tag) for tag in c}
+        for field, count in field_tag_counts.items():
+            if field not in used_fields:
+                total += count
+    return total
 
 def calc_number_of_combs(tags, l):
     field_to_tags_dict = defaultdict(list)
@@ -158,36 +166,88 @@ def calc_number_of_combs(tags, l):
 
     return dp[l]
 
-def get_combs_of_len(l: int, min_profit_n: int = 100) -> list[tuple[str, ...]]:
+def bayesian_winrate(profit: int, total: int) -> float:
+    alpha = 10
+    beta = 10
+    loss = total - profit
+    return (profit + alpha) / (profit + loss + alpha + beta)
+
+def get_combs_of_len(
+    l: int,
+    min_profit_n_values: tuple[int, ...] = (0,),
+    get_by_profit_n: int = 1000,
+    get_by_bayesian_winrate_n: int = 1000,
+) -> list[CombGrade]:
+
+    if len(min_profit_n_values) < l+1:
+        raise ValueError(f"{len(min_profit_n_values)=} < {l+1=}.")
+
     # from mp.optimizer.parallel_reduce_combs import reduce_combs_parallel
-    from mp.optimizer.parallel_reduce_combs_gpu import reduce_combs_parallel_gpu
+    from mp.optimizer.parallel_reduce_combs_gpu import grade_combs_parallel_gpu
     global _train_df
-    _train_df = pd.read_csv(f"{data_dir}/marked_points_train.csv")
+    if _train_df is None:
+        _train_df = pd.read_csv(f"{data_dir}/marked_points_train.csv")
 
     tags = [x for x in _train_df.columns if x.startswith("#tag_")]
     print(f"Number of tags: {len(tags)}.")
 
     combs = []
-    min_profit_n_values = [0, 500, 400, 300, 200, 100]
+    selected_graded_combs = None
     for i in range(1, l+1):
+        print(f"Input combs for get deeper count: {len(combs)}.")
         start = time.perf_counter()
-        combs = get_deeper_combs(combs, tags)
+        combs = build_deeper_combs(combs, tags)
         end = time.perf_counter()
-        print(f"Get {len(combs)} combs of len {i}.")
-        print(f"Get deeper combs time: {end-start}s.")
+        print(f"Deeper combs count: {len(combs)}, {i=}, time: {end - start}s.")
+
+        print(f"Grade combs...")
+        start = time.perf_counter()
+        graded_combs = grade_combs_parallel_gpu(combs)
+        # graded_combs = grade_combs_parallel_cpu(combs)
+        end = time.perf_counter()
+        print(f"Grade combs time: {end - start}s.")
 
         start = time.perf_counter()
-        # combs = reduce_combs_parallel(combs, min_profit_n_values[i])
-        combs = reduce_combs_parallel_gpu(combs, min_profit_n_values[i])
+        graded_combs = [
+            CombGrade(comb=comb, profit=profit, total=total, bayesian_winrate=bayesian_winrate(profit, total))
+            for comb, profit, total in graded_combs if profit > min_profit_n_values[i]
+        ]
         end = time.perf_counter()
-        print(f"Get {len(combs)} combs of len {i} after reduce.")
-        print(f"Reduce time: {end-start}s.")
+        print(f"Filter combs by min_profit_n_value: {min_profit_n_values[i]}, count: {len(graded_combs)}, time: {end - start}s.")
 
-    return combs
+        start = time.perf_counter()
+        graded_combs_sorted = list(sorted(graded_combs, key=lambda x: x.profit, reverse=True))
+        graded_combs_selected_by_profit = graded_combs_sorted[:get_by_profit_n]
+        end = time.perf_counter()
+        print(f"Select graded combs by profit, len: {len(graded_combs_selected_by_profit)}, time: {end - start}s.")
+
+        start = time.perf_counter()
+        graded_combs_sorted = list(sorted(graded_combs, key=lambda x: x.bayesian_winrate, reverse=True))
+        graded_combs_selected_by_bayesian_winrate = graded_combs_sorted[:get_by_bayesian_winrate_n]
+        end = time.perf_counter()
+        print(f"Select graded combs by bayesian winrate, len: {len(graded_combs_selected_by_bayesian_winrate)}, time: {end - start}s.")
+
+        start = time.perf_counter()
+        selected_graded_combs = graded_combs_selected_by_profit + graded_combs_selected_by_bayesian_winrate
+        combs = [x.comb for x in selected_graded_combs]
+        end = time.perf_counter()
+        print(f"Total selected combs: {len(combs)}, {i=}, time: {end - start}s.")
+
+    return selected_graded_combs
+
+def optimize_combs(l, get_by_profit_n, get_by_bayesian_winrate_n, m):
+    min_profit_n_values = (m,)*(l+1)
+    combs_ = get_combs_of_len(l, min_profit_n_values, get_by_profit_n, get_by_bayesian_winrate_n)
+    graded_combs_sorted = list(sorted(combs_, key=lambda x: x.bayesian_winrate, reverse=True))
+    result = [graded_combs_sorted[0]]
+    return result
 
 
 if __name__ == "__main__":
-    combs_ = get_combs_of_len(5)
-
-    # for comb_ in combs_:
-    #     print(comb_)
+    min_profit_n_values = (0, 100, 100, 100, 100, 100, 100, 100, 100)
+    # combs_ = get_combs_of_len(5, min_profit_n_values, 1000, 1000)
+    tags_ = ["a_1", "a_2", "a_3", "b_1", "b_2", "b_3", "c_1", "c_2", "c_3", "d_1", "d_2", "d_3"]
+    input_combs_ = []
+    combs_ = build_deeper_combs(input_combs_, tags_)
+    for comb_ in combs_:
+        print(comb_)

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import mp.optimizer.init_data as data
 import mp.optimizer.mark as mark
 import mp.optimizer.comb as comb
+import mp.optimizer.comb_v2 as comb_v2
 import mp.optimizer.benchmark as benchmark
 
 
@@ -165,34 +166,50 @@ if __name__ == '__main__':
     # mark.mark_data()
     # mark.split_marked_data()
 
-    f_name = "options_stats/exp_30-04_peak_down_3.txt"
+    f_name = "options_stats/exp_01-05_peak_down_1.txt"
     # options = generate_grid_options(
     #     l_values=[25],
     #     end_step=50,  # грубіший grid
     #     start_step=20
     # )
     options = [
+        # {
+        #     "l": 5,
+        #     "m": 20,
+        #     "get_by_profit_n": 50,
+        #     "get_by_bayesian_winrate_n": 100,
+        # },
+        # {
+        #     "l": 5,
+        #     "m": 50,
+        #     "get_by_profit_n": 50,
+        #     "get_by_bayesian_winrate_n": 100,
+        # },
+        # {
+        #     "l": 5,
+        #     "m": 200,
+        #     "get_by_profit_n": 100,
+        #     "get_by_bayesian_winrate_n": 100,
+        # },
+        # {
+        #     "l": 5,
+        #     "m": 200,
+        #     "get_by_profit_n": 50,
+        #     "get_by_bayesian_winrate_n": 100,
+        # },
         {
-            "start_c": 40,
-            "end_c": 10,
-            "l": 10
-        },
-        {
-            "start_c": 50,
-            "end_c": 20,
-            "l": 10
-        },
-        {
-            "start_c": 80,
-            "end_c": 50,
-            "l": 10
+            "l": 15,
+            "m": 100,
+            "get_by_profit_n": 100,
+            "get_by_bayesian_winrate_n": 200,
         },
     ]
     # options = random.sample(options, 50)
 
     print(str(options).replace("},", "},\n"))
     for option in options:
-        optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
+        # optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
+        optimal_combs = comb_v2.optimize_combs(**option)
 
         if optimal_combs:
             intervals_stat, total_count, total_sl_count, total_k = benchmark.super_benchmark(optimal_combs)
