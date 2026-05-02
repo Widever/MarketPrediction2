@@ -24,6 +24,8 @@ import pandas as pd
 import torch
 import torch_directml
 
+from mp.optimizer.comb import grade_comb
+
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
@@ -102,22 +104,26 @@ def evaluate_batch(
     peak_up:      torch.Tensor,       # (N,)    float32
     col_index:    dict[str, int],     # column-name → index in data_bool
     batch:        list[tuple[str, ...]],
-    min_profit_n: int,
-) -> list[tuple[str, ...]]:
+) -> list[tuple[tuple[str, ...], int, int]]:
     """
     Evaluate a batch of combinations entirely on the GPU.
 
-    For each combination we need:
-      matched_rows  = rows where ALL columns in the combo are True
-      profit        = |matched_rows ∩ (peak_down=1 ∧ peak_up=0)|
-      keep          = profit > min_profit_n
+    For each combination we compute:
+      total   = number of rows where ALL columns in the combo are True
+      profit  = |matched_rows ∩ (peak_down=1 ∧ peak_up=0)|
 
     Vectorised approach
     -------------------
     selector : (B, C) float32 — 1 where the combo uses that column
     match    : (B, N) = (selector @ data_bool.T) == combo_length
                a row matches iff every selected column is True
-    profit   : (B,)  = match @ (peak_down & ~peak_up)
+    totals   : (B,)  = match.sum(dim=1)
+    profits  : (B,)  = match @ (peak_down & ~peak_up)
+
+    Returns
+    -------
+    List of (comb, profit, total) for every combination in the batch.
+    All filtering is left to the caller.
     """
     B      = len(batch)
     C      = data_bool.shape[1]
@@ -135,44 +141,50 @@ def evaluate_batch(
     hit_counts = torch.mm(selector, data_bool.T)            # (B, N)
 
     # A row matches combo i iff every selected column is True
-    match = hit_counts == lengths.unsqueeze(1)              # (B, N)  bool
+    match   = hit_counts == lengths.unsqueeze(1)            # (B, N)  bool
+    match_f = match.to(torch.float32)                       # (B, N)  float32
+
+    # total[i] = number of rows matched by combo i
+    totals = match_f.sum(dim=1)                             # (B,)
 
     # profit_signal[row] = 1 iff peak_down=1 AND peak_up=0
     profit_signal = peak_down * (1.0 - peak_up)            # (N,)  float32
 
     # profit[i] = number of matched rows that are profit signals
     # Note: torch.mv is not supported by DirectML, so we use torch.mm with a column vector
-    profits = torch.mm(match.to(torch.float32), profit_signal.unsqueeze(1)).squeeze(1)  # (B,)
+    profits = torch.mm(match_f, profit_signal.unsqueeze(1)).squeeze(1)  # (B,)
 
-    # Filter — move result back to CPU for Python-level filtering
-    keep_mask = (profits > min_profit_n).cpu().numpy()
+    # Single host transfer: move both vectors together to minimise PCIe round-trips
+    results_np = torch.stack([profits, totals], dim=0).cpu().numpy()    # (2, B)
 
-    return [comb for comb, keep in zip(batch, keep_mask) if keep]
+    return [
+        (comb, int(results_np[0, i]), int(results_np[1, i]))
+        for i, comb in enumerate(batch)
+    ]
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-def reduce_combs_gpu(
-    combs:        list[tuple[str, ...]],
-    min_profit_n: int,
-    batch_size:   int = DEFAULT_BATCH_SIZE,
-    device:       Optional[torch.device] = None,
-) -> list[tuple[str, ...]]:
+def grade_combs_gpu(
+    combs:      list[tuple[str, ...]],
+    batch_size: int = DEFAULT_BATCH_SIZE,
+    device:     Optional[torch.device] = None,
+) -> list[tuple[tuple[str, ...], int, int]]:
     """
     GPU replacement for reduce_combs_parallel().
 
     Parameters
     ----------
-    combs         : list of column-name tuples to evaluate
-    min_profit_n  : minimum profit count to keep a combination
-    batch_size    : how many combinations to evaluate per GPU batch
-    device        : torch.device (auto-detected if None)
+    combs       : list of column-name tuples to evaluate
+    batch_size  : how many combinations to evaluate per GPU batch
+    device      : torch.device (auto-detected if None)
 
     Returns
     -------
-    Filtered list of combinations where profit > min_profit_n.
+    List of (comb, profit, total) for every input combination.
+    No filtering is applied — callers decide their own threshold.
     """
     if device is None:
         device = get_device()
@@ -181,7 +193,7 @@ def reduce_combs_gpu(
     col_index = {name: i for i, name in enumerate(feature_cols)}
 
     total     = len(combs)
-    new_combs = []
+    results: list[tuple[tuple[str, ...], int, int]] = []
     processed = 0
     start     = time.time()
 
@@ -190,8 +202,7 @@ def reduce_combs_gpu(
     for batch_start in range(0, total, batch_size):
         batch = combs[batch_start : batch_start + batch_size]
 
-        kept = evaluate_batch(data_bool, peak_down, peak_up, col_index, batch, min_profit_n)
-        new_combs.extend(kept)
+        results.extend(evaluate_batch(data_bool, peak_down, peak_up, col_index, batch))
         processed += len(batch)
 
         if processed % REPORT_EVERY < batch_size or processed >= total:
@@ -203,22 +214,25 @@ def reduce_combs_gpu(
                 f"  [{processed:,}/{total:,}] "
                 f"({processed / total:.1%}) | "
                 f"{rate:,.0f} combos/s | "
-                f"ETA ~ {eta / 60:.1f} min | "
-                f"kept so far: {len(new_combs):,}"
+                f"ETA ~ {eta / 60:.1f} min"
             )
 
     elapsed = time.time() - start
-    print(f"[GPU] Done in {elapsed:.1f}s — kept {len(new_combs):,} / {total:,} combinations.")
-    return new_combs
+    print(f"[GPU] Done in {elapsed:.1f}s — evaluated {total:,} combinations.")
+    return results
 
 
 # ---------------------------------------------------------------------------
 # Backwards-compat shim
 # ---------------------------------------------------------------------------
 
-def reduce_combs_parallel_gpu(
+def grade_combs_parallel_gpu(
     combs: list[tuple[str, ...]],
-    min_profit_n: int,
-) -> list[tuple[str, ...]]:
-    """Drop-in replacement for the original CPU multiprocessing version."""
-    return reduce_combs_gpu(combs, min_profit_n)
+) -> list[tuple[tuple[str, ...], int, int]]:
+    """
+    Drop-in replacement for the original CPU multiprocessing version.
+    Applies the profit threshold filter that the core function no longer enforces.
+    """
+    results = grade_combs_gpu(combs)
+    return results
+    # return [comb for comb, profit, _total in results if profit > min_profit_n]

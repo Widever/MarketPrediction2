@@ -37,7 +37,7 @@ def profit_loss_in_df(comb_df):
     loss = len(comb_df) - profit
     return profit, loss
 
-def comb_reduce_worker(comb, min_profit_n):
+def comb_grade_worker(comb):
     global _train_df
 
     if _train_df is None:
@@ -50,12 +50,10 @@ def comb_reduce_worker(comb, min_profit_n):
     comb_df = _train_df[select_mask]
     profit, loss = profit_loss_in_df(comb_df)
 
-    if profit > min_profit_n:
-        return comb
-    else:
-        return None
+    return comb, profit, profit+loss
 
-def reduce_combs_parallel(combs: list[tuple[str, ...]], min_profit_n: int) -> list[tuple[str, ...]]:
+
+def grade_combs_parallel_cpu(combs: list[tuple[str, ...]]) -> list[tuple[str, ...]]:
     global _train_df
     workers = cpu_count() - 2
     print(f"Parallel reduce combs {workers=}.")
@@ -66,12 +64,11 @@ def reduce_combs_parallel(combs: list[tuple[str, ...]], min_profit_n: int) -> li
     start = time.time()
     new_combs = []
 
-    worker = partial(comb_reduce_worker, min_profit_n=min_profit_n)
+    worker = comb_grade_worker
 
     with ProcessPoolExecutor(max_workers=workers) as executor:
         for v in executor.map(worker, combs, chunksize=10_000):
-            if v is not None:
-                new_combs.append(v)
+            new_combs.append(v)
             processed += 1
 
             if processed % report_every == 0:
