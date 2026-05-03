@@ -161,10 +161,12 @@ def profit_loss_in_df(comb_df):
     # Peak down
     profit = len(
         comb_df[
-            (comb_df["peak_down"]) &
-            (~comb_df["peak_up"])
+            # (comb_df["peak_down"]) &
+            # (~comb_df["peak_up"])
             # (comb_df["change_from_last_peak"] < -0.025)
-            # (comb_df["len_from_last_peak"] > 30)
+            (comb_df["len_peak_to_peak"] - comb_df["len_from_last_peak"] < 3) &
+            (comb_df["last_peak_type"] == "up") &
+            (comb_df["ada_ampl"] > 0.01)
             # (comb_df["avg_log_return"] < -0.00)
         ]
     )

@@ -119,8 +119,9 @@ class MarkedPoint:
     peak_up: bool = False
     peak_down: bool = False
     change_from_last_peak: float = 0.0
-    len_from_last_peak: float = 0
+    len_from_last_peak: int = 0
     last_peak_type: str = None
+    len_peak_to_peak: int = 0
 
 
 class PriceTrend(IntEnum):
@@ -640,6 +641,7 @@ def detect_trends(peaks_df: pd.DataFrame) -> pd.DataFrame:
 
     result["change_from_last_peak"] = 0.0
     result["len_from_last_peak"] = 0.0
+    result["len_peak_to_peak"] = 0.0
     result["last_peak_type"] = None
 
     last_peak_price = None
@@ -677,6 +679,21 @@ def detect_trends(peaks_df: pd.DataFrame) -> pd.DataFrame:
             last_peak_price = low
             last_peak_idx = i
             last_peak_type = "down"
+
+    current_len_peak_to_peak = 0
+    reset: bool = True
+    for j in range(len(result)-1, -1, -1):
+        if reset:
+            current_len_peak_to_peak = result.iloc[j]["len_from_last_peak"]
+            reset = False
+
+        result.loc[j, "len_peak_to_peak"] = current_len_peak_to_peak
+
+        peak_up = result.iloc[j]["peak_up"]
+        peak_down = result.iloc[j]["peak_down"]
+
+        if peak_up or peak_down:
+            reset = True
 
     return result
 
@@ -793,6 +810,7 @@ def mark_data():
             change_from_last_peak=row["change_from_last_peak"],
             len_from_last_peak=row["len_from_last_peak"],
             last_peak_type=row["last_peak_type"],
+            len_peak_to_peak=row["len_peak_to_peak"],
         )
         opened_points.append(new_opened_marked_point)
 
