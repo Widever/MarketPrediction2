@@ -18,12 +18,20 @@ data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 _train_df = None
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class CombGrade:
     comb: tuple[str, ...] | None = None
     bayesian_winrate: float = 0.0
     profit: int = 0
     total: int = 0
+
+    def __hash__(self):
+        return hash(self.comb)
+
+    def __eq__(self, other):
+        if not isinstance(other, CombGrade):
+            return NotImplemented
+        return self.comb == other.comb
 
 def get_select_combs_mask(marked_points_df: pd.DataFrame, combs: list[tuple[str, ...]]) -> pd.Series:
     n = len(marked_points_df)
@@ -197,8 +205,9 @@ def get_combs_of_len(
         print(f"Input combs for get deeper count: {len(combs)}.")
         start = time.perf_counter()
         combs = build_deeper_combs(combs, tags)
+        initial_len = len(combs)
         end = time.perf_counter()
-        print(f"Deeper combs count: {len(combs)}, {i=}, time: {end - start}s.")
+        print(f"Deeper combs count: {initial_len}, {i=}, time: {end - start}s.")
 
         print(f"Grade combs...")
         start = time.perf_counter()
@@ -213,25 +222,28 @@ def get_combs_of_len(
             for comb, profit, total in graded_combs if profit > min_profit_n_values[i]
         ]
         end = time.perf_counter()
-        print(f"Filter combs by min_profit_n_value: {min_profit_n_values[i]}, count: {len(graded_combs)}, time: {end - start}s.")
-
-        start = time.perf_counter()
-        graded_combs_sorted = list(sorted(graded_combs, key=lambda x: x.profit, reverse=True))
-        graded_combs_selected_by_profit = graded_combs_sorted[:get_by_profit_n]
-        end = time.perf_counter()
-        print(f"Select graded combs by profit, len: {len(graded_combs_selected_by_profit)}, time: {end - start}s.")
+        print(f"Filter combs by min_profit_n_value: {min_profit_n_values[i]}, count: {len(graded_combs)}/{initial_len}, time: {end - start}s.")
 
         start = time.perf_counter()
         graded_combs_sorted = list(sorted(graded_combs, key=lambda x: x.bayesian_winrate, reverse=True))
         graded_combs_selected_by_bayesian_winrate = graded_combs_sorted[:get_by_bayesian_winrate_n]
+        graded_combs_selected_by_bayesian_winrate_worst = set(graded_combs_sorted[-get_by_bayesian_winrate_n:])
         end = time.perf_counter()
-        print(f"Select graded combs by bayesian winrate, len: {len(graded_combs_selected_by_bayesian_winrate)}, time: {end - start}s.")
+        print(f"Select graded combs by bayesian winrate, len: {len(graded_combs_selected_by_bayesian_winrate)}/{initial_len}, time: {end - start}s.")
+
+        start = time.perf_counter()
+        graded_combs_exclude_worst = [x for x in graded_combs if x not in graded_combs_selected_by_bayesian_winrate_worst]
+        graded_combs_sorted = list(sorted(graded_combs_exclude_worst, key=lambda x: x.profit, reverse=True))
+        graded_combs_selected_by_profit = graded_combs_sorted[:get_by_profit_n]
+        end = time.perf_counter()
+        print(f"Select graded combs by profit, len: {len(graded_combs_selected_by_profit)}/{initial_len}, time: {end - start}s.")
+
 
         start = time.perf_counter()
         selected_graded_combs = graded_combs_selected_by_profit + graded_combs_selected_by_bayesian_winrate
         combs = [x.comb for x in selected_graded_combs]
         end = time.perf_counter()
-        print(f"Total selected combs: {len(combs)}, {i=}, time: {end - start}s.")
+        print(f"Total selected combs: {len(combs)}/{initial_len}, {i=}, time: {end - start}s.")
 
     return selected_graded_combs
 
