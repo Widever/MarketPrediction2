@@ -118,6 +118,8 @@ class MarkedPoint:
 
     peak_up: bool = False
     peak_down: bool = False
+    hemi_peak_up: bool = False
+    hemi_peak_down: bool = False
     change_from_last_peak: float = 0.0
     len_from_last_peak: int = 0
     last_peak_type: str = None
@@ -697,6 +699,56 @@ def detect_trends(peaks_df: pd.DataFrame) -> pd.DataFrame:
 
     return result
 
+def detect_hemi_peaks(df: pd.DataFrame, threshold: float = 0.01) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+
+    result = df.copy().reset_index(drop=True)
+
+    result["hemi_peak_up"] = False
+    result["hemi_peak_down"] = False
+
+    trend = PriceTrend.UNKNOWN
+
+    last_high = result.iloc[0]["high"]
+    last_low = result.iloc[0]["low"]
+    last_high_idx = 0
+    last_low_idx = 0
+
+    for i in range(1, len(result)):
+        high = result.iloc[i]["high"]
+        low = result.iloc[i]["low"]
+
+        # Оновлюємо екстремуми
+        if high > last_high:
+            last_high = high
+            last_high_idx = i
+
+        if low < last_low:
+            last_low = low
+            last_low_idx = i
+
+        drop_from_high = (last_high - low) / last_high
+        rise_from_low = (high - last_low) / last_low
+
+        # Падіння більше threshold → фіксуємо peak_up
+        if drop_from_high >= threshold and trend != PriceTrend.DOWN:
+            result.loc[last_high_idx, "hemi_peak_up"] = True
+            trend = PriceTrend.DOWN
+
+            last_low = low
+            last_low_idx = i
+
+        # Ріст більше threshold → фіксуємо peak_down
+        elif rise_from_low >= threshold and trend != PriceTrend.UP:
+            result.loc[last_low_idx, "hemi_peak_down"] = True
+            trend = PriceTrend.UP
+
+            last_high = high
+            last_high_idx = i
+
+    return result
+
 def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     if df.empty:
         return df.copy()
@@ -750,6 +802,7 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
             last_high = high
             last_high_idx = i
 
+    result = detect_hemi_peaks(result, threshold/2)
     result = detect_trends(result)
     return result
 
@@ -807,6 +860,8 @@ def mark_data():
 
             peak_up=row["peak_up"],
             peak_down=row["peak_down"],
+            hemi_peak_up=row["hemi_peak_up"],
+            hemi_peak_down=row["hemi_peak_down"],
             change_from_last_peak=row["change_from_last_peak"],
             len_from_last_peak=row["len_from_last_peak"],
             last_peak_type=row["last_peak_type"],

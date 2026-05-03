@@ -166,7 +166,7 @@ if __name__ == '__main__':
     # mark.mark_data()
     # mark.split_marked_data()
 
-    f_name = "options_stats/exp_01-05_peak_down_1.txt"
+    f_name = "options_stats/exp_04-05_all_modes_1.txt"
     # options = generate_grid_options(
     #     l_values=[25],
     #     end_step=50,  # грубіший grid
@@ -174,38 +174,22 @@ if __name__ == '__main__':
     # )
     options = [
         # {
-        #     "l": 5,
-        #     "m": 20,
-        #     "get_by_profit_n": 50,
-        #     "get_by_bayesian_winrate_n": 100,
-        # },
-        # {
-        #     "l": 5,
+        #     "l": 15,
         #     "m": 50,
         #     "get_by_profit_n": 50,
         #     "get_by_bayesian_winrate_n": 100,
-        # },
-        # {
-        #     "l": 5,
-        #     "m": 200,
-        #     "get_by_profit_n": 100,
-        #     "get_by_bayesian_winrate_n": 100,
-        # },
-        # {
-        #     "l": 5,
-        #     "m": 200,
-        #     "get_by_profit_n": 50,
-        #     "get_by_bayesian_winrate_n": 100,
+        #     "profit_signal_mode": 1,
         # },
         {
             "l": 15,
-            "m": 50,
+            "m": 100,
             "get_by_profit_n": 50,
             "get_by_bayesian_winrate_n": 100,
+            "profit_signal_mode": 2,
         },
     ]
     # options = random.sample(options, 50)
-
+    #
     print(str(options).replace("},", "},\n"))
     for option in options:
         # optimal_combs = comb.optimal_combs(limit_comb_n=1, **option)
