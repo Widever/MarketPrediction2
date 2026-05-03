@@ -55,9 +55,10 @@ REPORT_EVERY = 10_000          # progress reporting cadence (combinations)
 PROFIT_SIGNAL_MODE: int = 2   # choose 1, 2, or 3
 
 # Thresholds used by MODE 2 and MODE 3 (ignored in MODE 1)
-M: int = 3   # MODE 2: max allowed (len_peak_to_peak - len_from_last_peak)
-K: int = 5    # MODE 3: max allowed len_from_last_peak
-L: int = 10   # MODE 3: min required len_peak_to_peak
+M: int   = 10    # MODE 2: max allowed (len_peak_to_peak - len_from_last_peak)
+A: float = 0.008   # MODE 2: min required ada_ampl
+K: int   = 5     # MODE 3: max allowed len_from_last_peak
+L: int   = 20    # MODE 3: min required len_peak_to_peak
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +82,7 @@ def get_device() -> torch.device:
 
 def load_train_tensors(
     device: torch.device,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray, list[str]]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, np.ndarray, list[str]]:
     """
     Read the CSV and return pre-allocated GPU tensors.
 
@@ -92,6 +93,7 @@ def load_train_tensors(
     peak_up            : (N,)    float32 — 'peak_up'   column          (MODE 1)
     len_peak_to_peak   : (N,)    float32 — 'len_peak_to_peak' column   (MODE 2/3)
     len_from_last_peak : (N,)    float32 — 'len_from_last_peak' column (MODE 2/3)
+    ada_ampl           : (N,)    float32 — 'ada_ampl' column           (MODE 2)
     last_peak_type     : (N,)    np.ndarray[str]  — 'last_peak_type'   (MODE 2/3)
     col_names          : list[str] — column names matching axis-1 of data_bool
     """
@@ -101,7 +103,7 @@ def load_train_tensors(
     print(f"CSV loaded in {time.perf_counter() - t0:.2f}s  |  shape: {df.shape}")
 
     # Identify boolean / uint8 feature columns (exclude target columns)
-    target_cols = {"peak_down", "peak_up", "len_peak_to_peak", "len_from_last_peak", "last_peak_type"}
+    target_cols = {"peak_down", "peak_up", "len_peak_to_peak", "len_from_last_peak", "ada_ampl", "last_peak_type"}
     feature_cols = [
         c for c in df.columns
         if c not in target_cols and df[c].dtype in (bool, np.bool_, np.uint8, np.int8)
@@ -114,12 +116,13 @@ def load_train_tensors(
     peak_up            = torch.tensor(df["peak_up"].values.astype(np.float32),                 dtype=torch.float32, device=device)
     len_peak_to_peak   = torch.tensor(df["len_peak_to_peak"].values.astype(np.float32),        dtype=torch.float32, device=device)
     len_from_last_peak = torch.tensor(df["len_from_last_peak"].values.astype(np.float32),      dtype=torch.float32, device=device)
+    ada_ampl           = torch.tensor(df["ada_ampl"].values.astype(np.float32),                dtype=torch.float32, device=device)
     last_peak_type     = df["last_peak_type"].values   # kept as NumPy str array; used for boolean mask on CPU
 
     print(f"Tensors on {device} in {time.perf_counter() - t1:.2f}s  |  "
           f"data_bool: {tuple(data_bool.shape)}  |  features: {len(feature_cols)}")
 
-    return data_bool, peak_down, peak_up, len_peak_to_peak, len_from_last_peak, last_peak_type, feature_cols
+    return data_bool, peak_down, peak_up, len_peak_to_peak, len_from_last_peak, ada_ampl, last_peak_type, feature_cols
 
 
 # ---------------------------------------------------------------------------
@@ -132,6 +135,7 @@ def evaluate_batch(
     peak_up:            torch.Tensor,       # (N,)    float32
     len_peak_to_peak:   torch.Tensor,       # (N,)    float32
     len_from_last_peak: torch.Tensor,       # (N,)    float32
+    ada_ampl:           torch.Tensor,       # (N,)    float32
     last_peak_type:     np.ndarray,         # (N,)    str  ('up' | 'down')
     col_index:          dict[str, int],     # column-name → index in data_bool
     batch:              list[tuple[str, ...]],
@@ -145,7 +149,7 @@ def evaluate_batch(
 
     The profit_signal vector is built from the module-level PROFIT_SIGNAL_MODE:
       MODE 1: peak_down == 1  AND  peak_up == 0
-      MODE 2: (len_peak_to_peak - len_from_last_peak) < M  AND  last_peak_type == 'up'
+      MODE 2: (len_peak_to_peak - len_from_last_peak) < M  AND  ada_ampl > A  AND  last_peak_type == 'up'
       MODE 3: len_from_last_peak < K  AND  len_peak_to_peak > L  AND  last_peak_type == 'down'
 
     Vectorised approach
@@ -191,10 +195,11 @@ def evaluate_batch(
         profit_signal = peak_down * (1.0 - peak_up)                        # (N,)  float32
 
     elif PROFIT_SIGNAL_MODE == 2:
-        # (len_peak_to_peak - len_from_last_peak) < M  AND  last_peak_type == 'up'
+        # (len_peak_to_peak - len_from_last_peak) < M  AND  ada_ampl > A  AND  last_peak_type == 'up'
         is_up_mask  = torch.tensor(last_peak_type == "up", dtype=torch.float32, device=device)
         window_cond = ((len_peak_to_peak - len_from_last_peak) < M).to(torch.float32)
-        profit_signal = window_cond * is_up_mask                            # (N,)  float32
+        ampl_cond   = (ada_ampl > A).to(torch.float32)
+        profit_signal = window_cond * ampl_cond * is_up_mask                # (N,)  float32
 
     elif PROFIT_SIGNAL_MODE == 3:
         # len_from_last_peak < K  AND  len_peak_to_peak > L  AND  last_peak_type == 'down'
@@ -245,7 +250,7 @@ def grade_combs_gpu(
     if device is None:
         device = get_device()
 
-    data_bool, peak_down, peak_up, len_peak_to_peak, len_from_last_peak, last_peak_type, feature_cols = load_train_tensors(device)
+    data_bool, peak_down, peak_up, len_peak_to_peak, len_from_last_peak, ada_ampl, last_peak_type, feature_cols = load_train_tensors(device)
     col_index = {name: i for i, name in enumerate(feature_cols)}
 
     total     = len(combs)
@@ -260,7 +265,7 @@ def grade_combs_gpu(
 
         results.extend(evaluate_batch(
             data_bool, peak_down, peak_up,
-            len_peak_to_peak, len_from_last_peak, last_peak_type,
+            len_peak_to_peak, len_from_last_peak, ada_ampl, last_peak_type,
             col_index, batch,
         ))
         processed += len(batch)
