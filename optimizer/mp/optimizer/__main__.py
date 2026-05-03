@@ -199,9 +199,9 @@ if __name__ == '__main__':
         # },
         {
             "l": 15,
-            "m": 100,
-            "get_by_profit_n": 100,
-            "get_by_bayesian_winrate_n": 200,
+            "m": 50,
+            "get_by_profit_n": 50,
+            "get_by_bayesian_winrate_n": 100,
         },
     ]
     # options = random.sample(options, 50)

@@ -316,11 +316,13 @@ def tag_to_field(tag: str) -> str:
 def generate_combinations(attr_lists, m):
     result = []
 
-    list_combinations = list(itertools.combinations(attr_lists, m))
 
-    if len(list_combinations) > 50:
-        list_combinations = random.sample(list_combinations, 50)
+    list_combinations_idx = list(itertools.combinations(range(len(attr_lists)), m))
 
+    if len(list_combinations_idx) > 50:
+        list_combinations_idx = random.sample(list_combinations_idx, 50)
+
+    list_combinations = [attr_lists[i] for i in list_combinations_idx]
     print(f"List combinations len: {len(list_combinations)}")
 
     # вибираємо m списків із n
@@ -352,7 +354,7 @@ def optimal_combs(limit_comb_n=10, selected_combs=None, start_c=None, end_c=None
 
     attr_lists = list(tags_by_field.values())
     print(f"Tags by field len: {len(attr_lists)}")
-    combs = generate_combinations(attr_lists, 5)
+    combs = generate_combinations(attr_lists, 10)
 
     print(f"All combs len: {len(combs)}")
 
