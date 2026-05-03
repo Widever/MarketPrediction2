@@ -1,4 +1,5 @@
 import dataclasses
+import gc
 import math
 import os
 import time
@@ -185,6 +186,7 @@ def get_combs_of_len(
     min_profit_n_values: tuple[int, ...] = (0,),
     get_by_profit_n: int = 1000,
     get_by_bayesian_winrate_n: int = 1000,
+    profit_signal_mode: int = 1,
 ) -> list[CombGrade]:
 
     if len(min_profit_n_values) < l+1:
@@ -211,7 +213,8 @@ def get_combs_of_len(
 
         print(f"Grade combs...")
         start = time.perf_counter()
-        graded_combs = grade_combs_parallel_gpu(combs)
+        graded_combs = grade_combs_parallel_gpu(combs, profit_signal_mode)
+        end = time.perf_counter()
         # graded_combs = grade_combs_parallel_cpu(combs)
         end = time.perf_counter()
         print(f"Grade combs time: {end - start}s.")
@@ -247,19 +250,45 @@ def get_combs_of_len(
 
     return selected_graded_combs
 
-def optimize_combs(l, get_by_profit_n, get_by_bayesian_winrate_n, m):
+def optimize_combs(
+    l,
+    get_by_profit_n,
+    get_by_bayesian_winrate_n,
+    m,
+    profit_signal_mode: int,
+):
     min_profit_n_values = (m,)*(l+1)
-    combs_ = get_combs_of_len(l, min_profit_n_values, get_by_profit_n, get_by_bayesian_winrate_n)
+    combs_ = get_combs_of_len(l, min_profit_n_values, get_by_profit_n, get_by_bayesian_winrate_n, profit_signal_mode)
     graded_combs_sorted = list(sorted(combs_, key=lambda x: x.bayesian_winrate, reverse=True))
     result = [graded_combs_sorted[0]]
     return result
 
+def memory_leak_test():
+    from mp.optimizer.parallel_reduce_combs_gpu import grade_combs_parallel_gpu
+    global _train_df
+    if _train_df is None:
+        _train_df = pd.read_csv(f"{data_dir}/marked_points_train.csv")
+    tags = [x for x in _train_df.columns if x.startswith("#tag_")]
+
+    combs_full = []
+    combs_full = build_deeper_combs(combs_full, tags)
+    combs_full = random.sample(combs_full, 100)
+
+    combs_to_deep = combs_full
+    for i in range(15):
+        print(f">>>>>>>>>>> ITERATION {i}")
+        combs_ = build_deeper_combs(combs_to_deep, tags)
+        grade_combs_parallel_gpu(combs_)
+        combs_to_deep = [tuple(x) for x in random.sample(combs_, 100)]
+
 
 if __name__ == "__main__":
-    min_profit_n_values = (0, 100, 100, 100, 100, 100, 100, 100, 100)
-    # combs_ = get_combs_of_len(5, min_profit_n_values, 1000, 1000)
-    tags_ = ["a_1", "a_2", "a_3", "b_1", "b_2", "b_3", "c_1", "c_2", "c_3", "d_1", "d_2", "d_3"]
-    input_combs_ = []
-    combs_ = build_deeper_combs(input_combs_, tags_)
-    for comb_ in combs_:
-        print(comb_)
+    # min_profit_n_values = (0, 100, 100, 100, 100, 100, 100, 100, 100)
+    # # combs_ = get_combs_of_len(5, min_profit_n_values, 1000, 1000)
+    # tags_ = ["a_1", "a_2", "a_3", "b_1", "b_2", "b_3", "c_1", "c_2", "c_3", "d_1", "d_2", "d_3"]
+    # input_combs_ = []
+    # combs_ = build_deeper_combs(input_combs_, tags_)
+    # for comb_ in combs_:
+    #     print(comb_)
+
+    memory_leak_test()
