@@ -66,13 +66,13 @@ def load_train_tensors(
 
     Returns
     -------
-    data_bool        : (N, C)  float32 — all boolean feature columns
-    peak_down        : (N,)    float32 — 'peak_down'        column  (MODE 1)
-    peak_up          : (N,)    float32 — 'peak_up'          column  (MODE 1)
-    hemi_peak_down   : (N,)    float32 — 'hemi_peak_down'   column  (MODE 2)
-    len_peak_to_peak : (N,)    float32 — 'len_peak_to_peak' column  (MODE 2)
-    last_peak_type   : (N,)    np.ndarray[str]  — 'last_peak_type'  (MODE 2)
-    col_names        : list[str] — column names matching axis-1 of data_bool
+    data_bool      : (N, C)  float32 — all boolean feature columns
+    peak_down      : (N,)    float32 — 'peak_down'      column  (MODE 1, MODE 2)
+    peak_up        : (N,)    float32 — 'peak_up'        column  (MODE 1, MODE 2)
+    hemi_peak_down : (N,)    float32 — 'hemi_peak_down' column  (MODE 2)
+    hemi_peak_up   : (N,)    float32 — 'hemi_peak_up'   column  (MODE 2)
+    last_peak_type : (N,)    np.ndarray[str]  — 'last_peak_type'  (MODE 2)
+    col_names      : list[str] — column names matching axis-1 of data_bool
     """
     csv_path = os.path.join(data_dir, "marked_points_train.csv")
     t0 = time.perf_counter()
@@ -80,7 +80,7 @@ def load_train_tensors(
     print(f"CSV loaded in {time.perf_counter() - t0:.2f}s  |  shape: {df.shape}")
 
     # Identify boolean / uint8 feature columns (exclude target columns)
-    target_cols = {"peak_down", "peak_up", "hemi_peak_down", "len_peak_to_peak", "last_peak_type"}
+    target_cols = {"peak_down", "peak_up", "hemi_peak_down", "hemi_peak_up", "last_peak_type"}
     feature_cols = [
         c for c in df.columns
         if c not in target_cols and df[c].dtype in (bool, np.bool_, np.uint8, np.int8)
@@ -88,17 +88,17 @@ def load_train_tensors(
 
     # DirectML requires float32 — no float16 matmul support
     t1 = time.perf_counter()
-    data_bool        = torch.tensor(df[feature_cols].values.astype(np.float32),        dtype=torch.float32, device=device)
-    peak_down        = torch.tensor(df["peak_down"].values.astype(np.float32),          dtype=torch.float32, device=device)
-    peak_up          = torch.tensor(df["peak_up"].values.astype(np.float32),            dtype=torch.float32, device=device)
-    hemi_peak_down   = torch.tensor(df["hemi_peak_down"].values.astype(np.float32),     dtype=torch.float32, device=device)
-    len_peak_to_peak = torch.tensor(df["len_peak_to_peak"].values.astype(np.float32),   dtype=torch.float32, device=device)
-    last_peak_type   = df["last_peak_type"].values   # kept as NumPy str array; used for boolean mask on CPU
+    data_bool      = torch.tensor(df[feature_cols].values.astype(np.float32),        dtype=torch.float32, device=device)
+    peak_down      = torch.tensor(df["peak_down"].values.astype(np.float32),          dtype=torch.float32, device=device)
+    peak_up        = torch.tensor(df["peak_up"].values.astype(np.float32),            dtype=torch.float32, device=device)
+    hemi_peak_down = torch.tensor(df["hemi_peak_down"].values.astype(np.float32),     dtype=torch.float32, device=device)
+    hemi_peak_up   = torch.tensor(df["hemi_peak_up"].values.astype(np.float32),       dtype=torch.float32, device=device)
+    last_peak_type = df["last_peak_type"].values   # kept as NumPy str array; used for boolean mask on CPU
 
     print(f"Tensors on {device} in {time.perf_counter() - t1:.2f}s  |  "
           f"data_bool: {tuple(data_bool.shape)}  |  features: {len(feature_cols)}")
 
-    return data_bool, peak_down, peak_up, hemi_peak_down, len_peak_to_peak, last_peak_type, feature_cols
+    return data_bool, peak_down, peak_up, hemi_peak_down, hemi_peak_up, last_peak_type, feature_cols
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ def evaluate_batch(
     peak_down:          torch.Tensor,       # (N,)    float32
     peak_up:            torch.Tensor,       # (N,)    float32
     hemi_peak_down:     torch.Tensor,       # (N,)    float32
-    len_peak_to_peak:   torch.Tensor,       # (N,)    float32
+    hemi_peak_up:       torch.Tensor,       # (N,)    float32
     last_peak_type:     np.ndarray,         # (N,)    str  ('up' | 'down')
     col_index:          dict[str, int],     # column-name → index in data_bool
     batch:              list[tuple[str, ...]],
@@ -170,10 +170,10 @@ def evaluate_batch(
         profit_signal = peak_down * (1.0 - peak_up)                        # (N,)  float32
 
     elif profit_signal_mode == 2:
-        # last_peak_type == 'down' AND hemi_peak_down == True AND len_peak_to_peak > 10
-        is_down_mask     = torch.tensor(last_peak_type == "down", dtype=torch.float32, device=device)
-        long_cycle_cond  = (len_peak_to_peak > 20).to(torch.float32)
-        profit_signal    = is_down_mask * hemi_peak_down * long_cycle_cond  # (N,)  float32
+        # last_peak_type == 'down' AND peak_up == False AND peak_down == False
+        # AND hemi_peak_up == False AND hemi_peak_down == True
+        is_down_mask   = torch.tensor(last_peak_type == "down", dtype=torch.float32, device=device)
+        profit_signal  = is_down_mask * (1.0 - peak_up) * (1.0 - peak_down) * (1.0 - hemi_peak_up) * hemi_peak_down  # (N,)  float32
 
     else:
         raise ValueError(f"Unknown profit_signal_mode={profit_signal_mode!r}. Must be 1 or 2.")
@@ -221,7 +221,7 @@ def grade_combs_gpu(
     if device is None:
         device = get_device()
 
-    data_bool, peak_down, peak_up, hemi_peak_down, len_peak_to_peak, last_peak_type, feature_cols = load_train_tensors(device)
+    data_bool, peak_down, peak_up, hemi_peak_down, hemi_peak_up, last_peak_type, feature_cols = load_train_tensors(device)
     col_index = {name: i for i, name in enumerate(feature_cols)}
 
     total     = len(combs)
@@ -235,7 +235,7 @@ def grade_combs_gpu(
         batch = combs[batch_start : batch_start + batch_size]
 
         results.extend(evaluate_batch(
-            data_bool, peak_down, peak_up, hemi_peak_down, len_peak_to_peak, last_peak_type,
+            data_bool, peak_down, peak_up, hemi_peak_down, hemi_peak_up, last_peak_type,
             col_index, batch,
             profit_signal_mode=profit_signal_mode,
         ))

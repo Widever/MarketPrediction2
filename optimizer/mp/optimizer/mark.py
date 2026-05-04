@@ -120,6 +120,8 @@ class MarkedPoint:
     peak_down: bool = False
     hemi_peak_up: bool = False
     hemi_peak_down: bool = False
+    max_hemi_peak_up: bool = False
+    max_hemi_peak_down: bool = False
     change_from_last_peak: float = 0.0
     len_from_last_peak: int = 0
     last_peak_type: str = None
@@ -707,6 +709,8 @@ def detect_hemi_peaks(df: pd.DataFrame, threshold: float = 0.01) -> pd.DataFrame
 
     result["hemi_peak_up"] = False
     result["hemi_peak_down"] = False
+    result["max_hemi_peak_up"] = False
+    result["max_hemi_peak_down"] = False
 
     trend = PriceTrend.UNKNOWN
 
@@ -747,7 +751,46 @@ def detect_hemi_peaks(df: pd.DataFrame, threshold: float = 0.01) -> pd.DataFrame
             last_high = high
             last_high_idx = i
 
+    # --- Compute max_hemi_peak_up / max_hemi_peak_down between consecutive peaks ---
+    _mark_max_hemi_peaks(result)
+
     return result
+
+
+def _mark_max_hemi_peaks(result: pd.DataFrame) -> None:
+    """
+    For each segment between two consecutive peaks (peak_up or peak_down),
+    mark the hemi_peak_up with the highest 'high' as max_hemi_peak_up,
+    and the hemi_peak_down with the lowest 'low' as max_hemi_peak_down.
+    Hemi-peaks that coincide with an actual peak are excluded.
+    """
+    peak_mask = result["peak_up"] | result["peak_down"]
+    peak_indices = result.index[peak_mask].tolist()
+
+    if len(peak_indices) < 2:
+        return
+
+    for start, end in zip(peak_indices, peak_indices[1:]):
+        # Segment between two peaks: exclusive of the peak rows themselves
+        segment = result.iloc[start + 1:end]
+        if segment.empty:
+            continue
+
+        # Candidates must be hemi-peaks AND not sit on an actual peak
+        up_candidates = segment[
+            segment["hemi_peak_up"] & ~(segment["peak_up"] | segment["peak_down"])
+        ]
+        down_candidates = segment[
+            segment["hemi_peak_down"] & ~(segment["peak_up"] | segment["peak_down"])
+        ]
+
+        if not up_candidates.empty:
+            max_up_idx = up_candidates["high"].idxmax()
+            result.loc[max_up_idx, "max_hemi_peak_up"] = True
+
+        if not down_candidates.empty:
+            min_down_idx = down_candidates["low"].idxmin()
+            result.loc[min_down_idx, "max_hemi_peak_down"] = True
 
 def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     if df.empty:
@@ -862,6 +905,8 @@ def mark_data():
             peak_down=row["peak_down"],
             hemi_peak_up=row["hemi_peak_up"],
             hemi_peak_down=row["hemi_peak_down"],
+            max_hemi_peak_up=row["max_hemi_peak_up"],
+            max_hemi_peak_down=row["max_hemi_peak_down"],
             change_from_last_peak=row["change_from_last_peak"],
             len_from_last_peak=row["len_from_last_peak"],
             last_peak_type=row["last_peak_type"],
