@@ -182,7 +182,7 @@ if __name__ == '__main__':
         # },
         {
             "l": 15,
-            "m": 100,
+            "m": 50,
             "get_by_profit_n": 50,
             "get_by_bayesian_winrate_n": 100,
             "profit_signal_mode": 2,

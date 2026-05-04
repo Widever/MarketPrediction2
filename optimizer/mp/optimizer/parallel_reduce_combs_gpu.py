@@ -125,7 +125,8 @@ def evaluate_batch(
 
     The profit_signal vector is built from profit_signal_mode:
       MODE 1: peak_down == 1  AND  peak_up == 0
-      MODE 2: last_peak_type == 'down'  AND  hemi_peak_down == True
+      MODE 2: last_peak_type == 'down'  AND  peak_up == False  AND  peak_down == False
+              AND  hemi_peak_up == False  AND  hemi_peak_down == True
 
     Vectorised approach
     -------------------
@@ -211,7 +212,9 @@ def grade_combs_gpu(
     device              : torch.device (auto-detected if None)
     profit_signal_mode  : which profit signal to use:
                             1 — peak_down == 1 AND peak_up == 0
-                            2 — last_peak_type == 'down' AND hemi_peak_down == True
+                            2 — last_peak_type == 'down' AND peak_up == False
+                                AND peak_down == False AND hemi_peak_up == False
+                                AND hemi_peak_down == True
 
     Returns
     -------

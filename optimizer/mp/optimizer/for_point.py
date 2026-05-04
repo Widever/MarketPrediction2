@@ -1,41 +1,26 @@
 import dataclasses
-import random
 
 import pandas as pd
 
 import mp.optimizer.init_data as data
 import mp.optimizer.mark as mark
-from mp.optimizer.comb import CombGrade, get_select_combs_mask
+from mp.optimizer.comb import get_select_combs_mask
+from mp.optimizer.comb_v2 import CombGrade
 
 
 def build_marked_points_df_for_point(symbol: str):
-    # ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
-    peaks_and_trend_df = data.PEAKS_AND_TREND_DICT[symbol]
-    opened_points = []
-    for idx, row in peaks_and_trend_df.iterrows():
-        timestamp = int(row["timestamp"])
-        point_values_ = mark.point_values(symbol, timestamp)
-
-        new_opened_marked_point = mark.MarkedPoint(
-            index=idx,
-            timestamp=timestamp,
-            values=point_values_,
-            sl_price_limit=0,
-            sell_price_limit=0,
-
-            peak_up=row["peak_up"],
-            peak_down=row["peak_down"],
-            change_from_last_peak=row["change_from_last_peak"],
-            len_from_last_peak=row["len_from_last_peak"],
-            last_peak_type=row["last_peak_type"],
-        )
-        opened_points.append(new_opened_marked_point)
+    ohlcv_df = data.CURRENCY_DATA_DICT[symbol].ohlcv_df
 
     marked_points_df_data = []
-    for marked_point in sorted(opened_points, key=lambda x: x.index):
-        marked_point_dict = dataclasses.asdict(marked_point)
-        marked_point_dict_values = marked_point_dict.pop("values")
-        marked_point_dict.update(marked_point_dict_values)
+    for idx, row in ohlcv_df.iterrows():
+        timestamp = int(row["timestamp"])
+        marked_point_dict = {
+            "timestamp": timestamp,
+        }
+
+        point_values_ = mark.point_values(symbol, timestamp)
+        point_values_dict = dataclasses.asdict(point_values_)
+        marked_point_dict.update(point_values_dict)
         marked_points_df_data.append(marked_point_dict)
 
     marked_points_df = pd.DataFrame(marked_points_df_data)
@@ -45,12 +30,22 @@ def build_marked_points_df_for_point(symbol: str):
 
 def check_combs_for_point() -> bool:
     combs: list[CombGrade] = [
-        CombGrade(comb=('#tag_ada_ampl_gt_0.012', '#tag_avg_drop_from_high_gt_0.03',
-                        '#tag_btc_doge_log_return_ratio_lt_0.513', '#tag_eth_ampl_gt_0.008',
-                        '#tag_btc_trend_kind_eq_falling', '#tag_doge_xrp_drop_from_high_ratio_lt_1.555',
-                        '#tag_btc_xrp_ampl_ratio_lt_0.672', '#tag_eth_ada_ampl_ratio_lt_1.227',
-                        '#tag_btc_ada_drop_from_high_ratio_lt_1.57', '#tag_btc_rise_from_low_lt_0.011'),
-                  score=0.411522633744856, props={'loss': 93, 'profit': 50, 'total': 143}, verify_grade=None)
+        CombGrade(comb=('#tag_avg_ampl_gt_0.01', '#tag_ada_rise_from_low_lt_0.014', '#tag_ada_log_return_gt_-0.004',
+                        '#tag_eth_drop_from_high_gt_0.015', '#tag_doge_ampl_gt_0.009',
+                        '#tag_doge_xrp_ampl_ratio_lt_1.701', '#tag_eth_ada_ampl_ratio_lt_1.571',
+                        '#tag_btc_eth_log_return_ratio_gt_-1.14', '#tag_doge_ada_drop_from_high_ratio_lt_2.71',
+                        '#tag_eth_ada_log_return_ratio_lt_5.468', '#tag_doge_sui_log_return_ratio_lt_4.875',
+                        '#tag_avg_log_return_ratio_gt_-0.767', '#tag_eth_doge_ampl_ratio_lt_1.595',
+                        '#tag_doge_sui_ampl_ratio_lt_1.633', '#tag_xrp_ampl_gt_0.006'),
+                  bayesian_winrate=0.648936170212766, profit=51, total=74),
+        CombGrade(comb=('#tag_ada_ampl_gt_0.004', '#tag_doge_ada_log_return_ratio_gt_2.868',
+                        '#tag_ada_drop_from_high_lt_0.013', '#tag_doge_sui_ampl_ratio_lt_1.178',
+                        '#tag_eth_rise_from_low_lt_0.025', '#tag_eth_ada_ampl_ratio_gt_0.54',
+                        '#tag_doge_sui_log_return_ratio_lt_3.042', '#tag_doge_ampl_lt_0.009',
+                        '#tag_xrp_rise_from_low_lt_0.052', '#tag_btc_xrp_drop_from_high_ratio_lt_3.327',
+                        '#tag_doge_ada_drop_from_high_ratio_lt_7.729', '#tag_avg_rise_from_low_lt_0.043',
+                        '#tag_btc_doge_log_return_ratio_lt_2.342', '#tag_avg_log_return_ratio_gt_-3.555',
+                        '#tag_avg_ampl_ratio_lt_1.181'), bayesian_winrate=0.3279569892473118, profit=51, total=166),
     ]
 
 

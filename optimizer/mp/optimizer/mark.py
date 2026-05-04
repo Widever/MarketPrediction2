@@ -845,7 +845,7 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
             last_high = high
             last_high_idx = i
 
-    result = detect_hemi_peaks(result, threshold/2)
+    result = detect_hemi_peaks(result, threshold/3)
     result = detect_trends(result)
     return result
 
