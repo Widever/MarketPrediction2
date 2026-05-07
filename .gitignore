@@ -2,3 +2,5 @@
 __pycache__
 .venv
 312venv
+**/currency_data_*/
+**/options_stats/
