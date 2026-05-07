@@ -8,6 +8,7 @@ import datetime as dt
 import mp.optimizer.for_point as for_point
 import mp.optimizer.init_data as data
 from binance import Client
+import argparse
 
 from mp.trade.execute_order import create_test_client, get_open_orders, get_available_quote_balance, buy_market_and_wait, \
     place_sell_all_with_sl_tp, get_current_price
@@ -15,6 +16,7 @@ from mp.trade.execute_order import create_test_client, get_open_orders, get_avai
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(data_dir, f"auto_trade_dir")
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 
 
 class Logger:
@@ -99,9 +101,7 @@ def wait_until_next_interval(interval_minutes: int = 15, min_gap_minutes: int = 
     time.sleep(wait_seconds)
 
 
-def schedule():
-    symbol = "ADAUSDT"
-    asset = "ADA"
+def schedule(symbol, asset, bet_usdt):
     interval = Client.KLINE_INTERVAL_5MINUTE
     interval_mins = 5
     min_gap_mins = 1
@@ -174,6 +174,10 @@ def schedule():
 
                 # Buy asset
                 usdt_balance = get_available_quote_balance(client, "USDT")
+
+                if bet_usdt < float(usdt_balance) * 0.8:
+                    raise RuntimeError(f"Insufficient funds in your balance to purchase {symbol}, {bet_usdt=}, {float(usdt_balance)=}.")
+
                 buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance)*0.8)
                 buy_order_avg_price = float(Decimal(buy_crypto_response["cummulativeQuoteQty"]) / Decimal(buy_crypto_response["executedQty"]))
                 print(f"Buy successfully, avg_price: {buy_order_avg_price}.")
@@ -198,6 +202,15 @@ def schedule():
             wait_until_next_interval(interval_mins, min_gap_mins)
             # time.sleep(0.1)
 
-
 if __name__ == "__main__":
-    schedule()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--symbol", default="ADAUSDT")
+    parser.add_argument("-a", "--asset", default="ADA")
+    parser.add_argument("-usdt", "--bet-usdt", type=float, default=30.0)
+    args = parser.parse_args()
+
+    data_dir = os.path.dirname(data_dir)
+    data_dir = os.path.join(data_dir, args.symbol)
+    data.MAIN_SYMBOL = args.symbol
+
+    schedule(args.symbol, args.asset, args.bet_usdt)
