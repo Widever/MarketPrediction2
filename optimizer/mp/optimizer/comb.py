@@ -10,6 +10,7 @@ from typing import Self
 
 import numpy as np
 import pandas as pd
+import mp.optimizer.init_data as data
 
 from mp.optimizer.mark import PointValues
 from mp.optimizer.parallel_grade_comb import grade_combs_parallel
@@ -21,6 +22,7 @@ min_verify_comb_k = 2
 print_combs_or_look = False
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 @dataclass(slots=True)

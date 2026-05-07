@@ -166,7 +166,7 @@ if __name__ == '__main__':
     # mark.mark_data()
     # mark.split_marked_data()
 
-    f_name = "options_stats/exp_04-05_all_modes_1.txt"
+    f_name = f"options_stats/{data.MAIN_SYMBOL}/exp_04-05_all_modes_1.txt"
     # options = generate_grid_options(
     #     l_values=[25],
     #     end_step=50,  # грубіший grid

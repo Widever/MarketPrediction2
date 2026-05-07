@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch_directml
+import mp.optimizer.init_data as data
 
 from mp.optimizer.comb import grade_comb
 
@@ -31,6 +32,7 @@ from mp.optimizer.comb import grade_comb
 # ---------------------------------------------------------------------------
 
 data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "optimize_main_dir")
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 
 # Number of combinations evaluated in one GPU batch.
 # Increase if you have plenty of VRAM; decrease if you get OOM errors.

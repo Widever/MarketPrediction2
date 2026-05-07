@@ -13,6 +13,7 @@ import pandas as pd
 import mp.optimizer.init_data as data
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 max_trend_len = 50
@@ -852,7 +853,7 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
 def mark_data(save_to_file: bool = True):
     start_time = time.time()
     closed_points: list[MarkedPoint] = []
-    symbol = "ADAUSDT"
+    symbol = data.MAIN_SYMBOL
 
     os.makedirs(data_dir, exist_ok=True)
 

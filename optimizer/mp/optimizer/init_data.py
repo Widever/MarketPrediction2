@@ -46,6 +46,8 @@ threshold_dict = {
     "SUIUSDT": 0.02,
 }
 
+MAIN_SYMBOL = "ADAUSDT"
+
 CURRENCY_DATA_DICT = {}
 
 LOG_RETURN_DICT = {}

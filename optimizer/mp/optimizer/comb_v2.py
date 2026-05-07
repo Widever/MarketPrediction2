@@ -11,10 +11,12 @@ import itertools
 import numpy as np
 import pandas as pd
 import random
+import mp.optimizer.init_data as data
 from mp.optimizer.mark import PointValues
 from mp.optimizer.parallel_reduce_combs import grade_combs_parallel_cpu
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 _train_df = None

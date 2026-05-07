@@ -7,8 +7,10 @@ from multiprocessing import cpu_count
 import pandas as pd
 
 import mp.optimizer.comb as comb_engine
+import mp.optimizer.init_data as data
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
 
 _train_df = None
