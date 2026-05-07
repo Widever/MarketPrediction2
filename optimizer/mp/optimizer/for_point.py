@@ -4,8 +4,7 @@ import pandas as pd
 
 import mp.optimizer.init_data as data
 import mp.optimizer.mark as mark
-from mp.optimizer.comb import get_select_combs_mask
-from mp.optimizer.comb_v2 import CombGrade
+from mp.optimizer.comb_v2 import CombGrade, get_select_combs_mask_ignore_scope
 
 
 def build_marked_points_df_for_point(symbol: str):
@@ -51,7 +50,7 @@ def check_combs_for_point() -> bool:
 
     marked_points_df = build_marked_points_df_for_point("ADAUSDT")
 
-    select_mask = get_select_combs_mask(marked_points_df, [comb_.comb for comb_ in combs])
+    select_mask = get_select_combs_mask_ignore_scope(marked_points_df, [comb_.comb for comb_ in combs])
     selected_df = marked_points_df[select_mask].reset_index(drop=True)
 
     last_ts = marked_points_df.iloc[-1]["timestamp"]

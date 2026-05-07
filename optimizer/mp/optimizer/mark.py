@@ -849,7 +849,7 @@ def detect_peaks(df: pd.DataFrame, threshold: float = 0.02) -> pd.DataFrame:
     result = detect_trends(result)
     return result
 
-def mark_data():
+def mark_data(save_to_file: bool = True):
     start_time = time.time()
     closed_points: list[MarkedPoint] = []
     symbol = "ADAUSDT"
@@ -924,7 +924,9 @@ def mark_data():
     marked_points_df = pd.DataFrame(marked_points_df_data)
     marked_points_df = add_tags_for_point_values(marked_points_df)
     marked_points_df = marked_points_df.round(5)
-    marked_points_df.to_csv(f"{data_dir}/marked_points_frozen.csv", index=False)
+
+    if save_to_file:
+        marked_points_df.to_csv(f"{data_dir}/marked_points_frozen.csv", index=False)
 
     end_time = time.time()
     print(f"Elapsed time: {end_time - start_time}s.")
