@@ -10,8 +10,8 @@ import mp.optimizer.init_data as data
 import mp.optimizer.mark as mark
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 
 def _custom_marked_points():
     from_dt = dt.datetime.fromisoformat("2026-05-05T01:40:08.320592")

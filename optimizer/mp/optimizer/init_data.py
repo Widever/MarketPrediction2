@@ -7,7 +7,6 @@ import pandas as pd
 
 from mp.market.binance_data_provider import BinanceDataProvider
 from mp.market.currency_data import CurrencyData
-from mp.optimizer import mark
 
 symbols = (
     "BTCUSDT",
@@ -182,7 +181,7 @@ def init_ampl_ratio_dict():
 
 
 def init_trend_dict(save_to_file=True):
-
+    from mp.optimizer import mark
     cache_dir = os.path.dirname(os.path.abspath(__file__))
     cache_dir = os.path.join(cache_dir, f"trend_data")
 
@@ -221,6 +220,7 @@ def init_trend_dict_from_cache():
         TREND_DICT[symbol] = pd.read_csv(file_path)
 
 def init_peaks_and_trend_dict():
+    from mp.optimizer import mark
     print(">>> init peaks and trend dict...")
     start = time.time()
 

@@ -22,8 +22,8 @@ min_verify_comb_k = 2
 print_combs_or_look = False
 
 data_dir = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 data_dir = os.path.join(data_dir, f"optimize_main_dir")
+data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 
 @dataclass(slots=True)
 class CombGrade:

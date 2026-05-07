@@ -31,7 +31,8 @@ from mp.optimizer.comb import grade_comb
 # Config
 # ---------------------------------------------------------------------------
 
-data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "optimize_main_dir")
+data_dir = os.path.dirname(os.path.abspath(__file__))
+data_dir = os.path.join(data_dir, f"optimize_main_dir")
 data_dir = os.path.join(data_dir, data.MAIN_SYMBOL)
 
 # Number of combinations evaluated in one GPU batch.

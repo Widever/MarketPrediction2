@@ -3,3 +3,4 @@ pandas
 mplfinance
 python-binance
 matplotlib
+torch-directml
