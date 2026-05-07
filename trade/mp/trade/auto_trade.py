@@ -175,10 +175,10 @@ def schedule(symbol, asset, bet_usdt):
                 # Buy asset
                 usdt_balance = get_available_quote_balance(client, "USDT")
 
-                if bet_usdt < float(usdt_balance) * 0.8:
+                if bet_usdt > float(usdt_balance) * 0.8:
                     raise RuntimeError(f"Insufficient funds in your balance to purchase {symbol}, {bet_usdt=}, {float(usdt_balance)=}.")
 
-                buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=float(usdt_balance)*0.8)
+                buy_crypto_response = buy_market_and_wait(client, symbol, quote_order_qty=bet_usdt)
                 buy_order_avg_price = float(Decimal(buy_crypto_response["cummulativeQuoteQty"]) / Decimal(buy_crypto_response["executedQty"]))
                 print(f"Buy successfully, avg_price: {buy_order_avg_price}.")
                 _file_logger.write(f"Buy successfully, avg_price: {buy_order_avg_price}.")
