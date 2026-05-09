@@ -1,4 +1,5 @@
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -133,7 +134,9 @@ if __name__ == '__main__':
     # data.init_log_return_ratio_dict()
     # data.init_ampl_dict()
     # data.init_ampl_ratio_dict()
-    # data.init_peaks_and_trend_dict()
+    #
+    # # data.init_peaks_and_trend_dict()
+    # data.init_peaks_and_trend_dict_from_cache()
     # data.init_drop_from_high_ratio_dict()
     # data.init_rise_from_low_ratio_dict()
 
@@ -166,12 +169,29 @@ if __name__ == '__main__':
     # mark.mark_data()
     # mark.split_marked_data()
 
-    f_name = f"options_stats/{data.MAIN_SYMBOL}/exp_04-05_all_modes_1.txt"
+    # start = time.perf_counter()
+    # symbol_df = data.CURRENCY_DATA_DICT[data.MAIN_SYMBOL].ohlcv_df
+    # threshold = 0.015
+    # peaks_and_trend_df = mark.detect_peaks(symbol_df, threshold=threshold)
+    # profit = len(
+    #     peaks_and_trend_df[
+    #         (peaks_and_trend_df["peak_down"]) &
+    #         (~peaks_and_trend_df["peak_up"])
+    #     ]
+    # )
+    # loss = len(peaks_and_trend_df) - profit
+    # end = time.perf_counter()
+    # print(f">>> mark.detect_peaks({data.MAIN_SYMBOL}, threshold={threshold}) elapsed time: {end - start} seconds.")
+    # print(f"{profit=}")
+    # print(f"{loss=}")
+
     # options = generate_grid_options(
     #     l_values=[25],
     #     end_step=50,  # грубіший grid
     #     start_step=20
     # )
+    f_name = f"options_stats/{data.MAIN_SYMBOL}/exp_04-05_all_modes_1.txt"
+
     options = [
         # {
         #     "l": 15,
@@ -180,10 +200,38 @@ if __name__ == '__main__':
         #     "get_by_bayesian_winrate_n": 100,
         #     "profit_signal_mode": 1,
         # },
+        # {
+        #     "l": 15,
+        #     "m": 50,
+        #     "get_by_profit_n": 30,
+        #     "get_by_bayesian_winrate_n": 100,
+        #     "profit_signal_mode": 2,
+        # },
         {
             "l": 15,
-            "m": 50,
+            "m": 55,
             "get_by_profit_n": 50,
+            "get_by_bayesian_winrate_n": 100,
+            "profit_signal_mode": 1,
+        },
+        {
+            "l": 15,
+            "m": 55,
+            "get_by_profit_n": 30,
+            "get_by_bayesian_winrate_n": 100,
+            "profit_signal_mode": 2,
+        },
+        {
+            "l": 15,
+            "m": 40,
+            "get_by_profit_n": 50,
+            "get_by_bayesian_winrate_n": 100,
+            "profit_signal_mode": 1,
+        },
+        {
+            "l": 15,
+            "m": 40,
+            "get_by_profit_n": 30,
             "get_by_bayesian_winrate_n": 100,
             "profit_signal_mode": 2,
         },

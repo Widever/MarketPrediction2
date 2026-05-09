@@ -35,17 +35,17 @@ ratio_pairs = (
 )
 
 threshold_dict = {
-    "BTCUSDT": 0.012,
-    "ETHUSDT": 0.012,
+    "BTCUSDT": 0.015,
+    "ETHUSDT": 0.015,
     "ADAUSDT": 0.015,
     "BNBUSDT": 0.015,
-    "DOGEUSDT": 0.02,
-    "XRPUSDT": 0.02,
-    "AVAXUSDT": 0.02,
-    "SUIUSDT": 0.02,
+    "DOGEUSDT": 0.015,
+    "XRPUSDT": 0.015,
+    "AVAXUSDT": 0.015,
+    "SUIUSDT": 0.015,
 }
 
-MAIN_SYMBOL = "ADAUSDT"
+MAIN_SYMBOL = "XRPUSDT"
 
 CURRENCY_DATA_DICT = {}
 
@@ -211,24 +211,35 @@ def init_trend_dict(save_to_file=True):
             df.to_csv(file_path, index=False)
 
 
-def init_trend_dict_from_cache():
+def init_peaks_and_trend_dict_from_cache():
     cache_dir = os.path.dirname(os.path.abspath(__file__))
-    cache_dir = os.path.join(cache_dir, f"trend_data")
+    cache_dir = os.path.join(cache_dir, f"peaks_and_trend_data")
 
     for symbol in symbols:
-        file_path = os.path.join(cache_dir, f"{symbol}.csv")
-        TREND_DICT[symbol] = pd.read_csv(file_path)
+        threshold = threshold_dict.get(symbol) or 0.02
+        file_path = os.path.join(cache_dir, f"{symbol}_{threshold}.csv")
+        PEAKS_AND_TREND_DICT[symbol] = pd.read_csv(file_path)
 
-def init_peaks_and_trend_dict():
+def init_peaks_and_trend_dict(save_to_file=True):
     from mp.optimizer import mark
+
+    cache_dir = os.path.dirname(os.path.abspath(__file__))
+    cache_dir = os.path.join(cache_dir, f"peaks_and_trend_data")
+
+    os.makedirs(cache_dir, exist_ok=True)
+
     print(">>> init peaks and trend dict...")
     start = time.time()
 
     for symbol in symbols:
         symbol_df = CURRENCY_DATA_DICT[symbol].ohlcv_df
         threshold = threshold_dict.get(symbol) or 0.02
-        peaks_and_trend_dict = mark.detect_peaks(symbol_df, threshold=threshold)
-        PEAKS_AND_TREND_DICT[symbol] = peaks_and_trend_dict
+        peaks_and_trend_df = mark.detect_peaks(symbol_df, threshold=threshold)
+        PEAKS_AND_TREND_DICT[symbol] = peaks_and_trend_df
+        if save_to_file:
+            file_path = os.path.join(cache_dir, f"{symbol}_{threshold}.csv")
+            peaks_and_trend_df.to_csv(file_path, index=False)
+
     end = time.time()
     print(f">>> elapsed time: {end - start} seconds.")
 

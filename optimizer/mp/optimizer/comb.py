@@ -159,31 +159,27 @@ def _comb_uniformity_2(comb_df, timestamp_range):
 
     return min_dist / timestamp_range
 
-def profit_loss_in_df(comb_df):
+def profit_loss_in_df(comb_df, mode):
     # Peak down
-    profit = len(
-        comb_df[
-            (comb_df["peak_down"]) &
-            (~comb_df["peak_up"])
-            # (comb_df["change_from_last_peak"] < -0.025)
-            # (comb_df["len_peak_to_peak"] - comb_df["len_from_last_peak"] < 0) &
-            # (comb_df["last_peak_type"] == "up")
-            # (comb_df["ada_ampl"] > 0.02)
-            # (comb_df["avg_log_return"] < -0.00)
-        ]
-    )
+    if mode == 1:
+        profit = len(
+            comb_df[
+                (comb_df["peak_down"]) &
+                (~comb_df["peak_up"])
+            ]
+        )
 
     # Middle rising
-    # profit = len(
-    #     comb_df[
-    #         (comb_df["ada_rise_from_low"] > 0.02) &
-    #         # (comb_df["rising"]) &
-    #         # (~comb_df["peak_up"]) &
-    #         # (comb_df["change_from_last_peak"] < 0.03) &
-    #         # (comb_df["len_from_last_peak"] < 20)
-    #         (comb_df["avg_log_return_ratio"] < 0)
-    #     ]
-    # )
+    elif mode == 2:
+        profit = len(
+            comb_df[
+                (comb_df["last_peak_type"] == "down") &
+                (~comb_df["peak_up"]) &
+                (~comb_df["peak_down"]) &
+                (~comb_df["hemi_peak_up"]) &
+                (comb_df["hemi_peak_down"])
+            ]
+        )
     loss = len(comb_df) - profit
     return profit, loss
 

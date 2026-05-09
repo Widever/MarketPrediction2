@@ -167,7 +167,7 @@ def schedule(symbol, asset, bet_usdt):
             print(f"Last timestamp = {last_timestamp}")
             print(f"Last timestamp dt = {last_timestamp_dt.isoformat()}")
 
-            decision = for_point.check_combs_for_point()
+            decision = for_point.check_combs_for_point(symbol)
             if decision:
                 print("!!!! Decision is True. Place order...")
                 _file_logger.write("!!!! Decision is True. Place order...")

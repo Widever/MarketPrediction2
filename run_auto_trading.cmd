@@ -1,7 +1,9 @@
 @echo off
 call :launch ADAUSDT ADA 30.0
-call :launch BTCUSDT BTC 20.0
-call :launch ETHUSDT ETH 25.0
+call :launch ETHUSDT ETH 30.0
+call :launch DOGEUSDT DOGE 30.0
+call :launch AVAXUSDT AVAX 30.0
+call :launch SUIUSDT SUI 30.0
 goto :eof
 
 :launch
